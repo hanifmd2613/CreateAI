@@ -15,12 +15,14 @@ interface BriefsFeedProps {
   briefs: Brief[];
   onNavigateToBuilder: () => void;
   onExploreMatchingCreators: (tools: string[]) => void;
+  onOpenExplainableMatch?: (brief: Brief) => void;
 }
 
 export const BriefsFeed: React.FC<BriefsFeedProps> = ({
   briefs,
   onNavigateToBuilder,
   onExploreMatchingCreators,
+  onOpenExplainableMatch,
 }) => {
   const [filterType, setFilterType] = useState('all');
   const [filterRights, setFilterRights] = useState('all');
@@ -179,19 +181,31 @@ export const BriefsFeed: React.FC<BriefsFeedProps> = ({
             </div>
 
             {/* Footer Actions */}
-            <div className="mt-5 pt-3.5 border-t border-zinc-800 flex items-center justify-between">
+            <div className="mt-5 pt-3.5 border-t border-zinc-800 flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 text-xs text-zinc-400">
                 <Clock className="w-3.5 h-3.5 text-zinc-500" />
                 <span>Turnaround: <strong className="text-zinc-200">{brief.deadline}</strong></span>
               </div>
 
-              <button
-                onClick={() => onExploreMatchingCreators(brief.requiredTools)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-200 font-medium text-xs border border-zinc-700 transition-colors"
-              >
-                <span>Matching Talent</span>
-                <ArrowRight className="w-3 h-3 text-zinc-400" />
-              </button>
+              <div className="flex items-center gap-2">
+                {onOpenExplainableMatch && (
+                  <button
+                    onClick={() => onOpenExplainableMatch(brief)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-medium text-xs border border-emerald-500/30 transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3 text-emerald-400" />
+                    <span>Explainable Match</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => onExploreMatchingCreators(brief.requiredTools)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-200 font-medium text-xs border border-zinc-700 transition-colors"
+                >
+                  <span>Matching Talent</span>
+                  <ArrowRight className="w-3 h-3 text-zinc-400" />
+                </button>
+              </div>
             </div>
 
           </div>

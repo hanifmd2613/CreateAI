@@ -1,139 +1,142 @@
 # CreateAI — Generative AI Content Creator Marketplace & Studio
 
-CreateAI is a high-fidelity, interactive web application connecting enterprise brands with vetted Generative AI directors and creators. Built with **Next.js 14 (App Router)**, **React 18**, **Tailwind CSS**, and **Lucide React**.
+[![Hackathon Submission](https://img.shields.io/badge/Hackathon-AI%20Creator%20Marketplace-purple.svg)](file:///c:/tempp/projects/CreatorMatch-AI/docs/FINAL_AUDIT_REPORT.md)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](file:///c:/tempp/projects/CreatorMatch-AI/tsconfig.json)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black.svg)](file:///c:/tempp/projects/CreatorMatch-AI/package.json)
+[![MongoDB](https://img.shields.io/badge/MongoDB-6.9-green.svg)](file:///c:/tempp/projects/CreatorMatch-AI/src/lib/mongodb.ts)
+
+CreateAI is an AI-native content creator marketplace connecting enterprise brands with vetted Generative AI directors and digital artists. Built with **Next.js 14 (App Router)**, **TypeScript**, **Tailwind CSS**, **MongoDB / Mongoose**, **Groq Llama-3.3 70B**, and **Google Gemini 1.5**.
 
 ---
 
-## ⚡ Core Features & Capabilities
+## ⚡ Key Capabilities & Hackathon Features
 
-### 1. Creator Discovery & Search
-- **Instant Search**: Search creators by name, skill, or AI model.
-- **Strict Production Stack**: Curated filters strictly limited to the top commercial generative models:
-  - **Veo** (Google DeepMind)
-  - **Kling** (Kling AI)
-  - **Sora** (OpenAI)
-  - **Flux.1** (Black Forest Labs)
-  - **ElevenLabs** (Generative Audio & Spatial Foley)
-  - **Pika** (Pika Labs)
-- **Indian Rupee Currency (`₹` / INR)**: All hourly rates and project budgets are standardized in INR with locale-aware formatting.
-- **Verified Workflow Seals**: Visual trust indicator certifying that creators utilize audited commercial pipelines with safe training datasets and full IP buyout rights.
+### 1. Creator Profiles & AI Portfolios
+- **Rich AI Creator Specs**: Specialization, bio, hourly rate (₹/hr), availability, completed projects, rating, and verified tool stack (`Veo`, `Kling`, `Sora`, `Flux.1`, `ElevenLabs`, `Pika`).
+- **Interactive Portfolio Inspection**: Inspect 3-stage generation pipelines, aspect ratios (`16:9`, `9:16`, `1:1`, `4:5`), prompt snippets, and generation seeds.
 
-### 2. Dual Theme Engine (Dark & Light Mode)
-- **One-Click Theme Toggle**: Accessible via the top navbar and mobile drawer.
-- **High-Contrast Styling**: Sleek obsidian dark mode and crisp Apple/Linear-inspired light mode (`#FAFAFA` backdrop, clean `#FFFFFF` surfaces, `#E4E4E7` borders).
-- **Persistent Preference**: Stores user preference seamlessly in `localStorage`.
+### 2. Brand / Agency Creative Briefs
+- Structured campaign briefs specifying content types, visual styles, aspect ratios, budgets in INR (`₹`), deadlines, deliverables, and commercial buyout terms.
 
-### 3. Hollywood-Grade UX & Motion
-- **Sleek Camera Viewfinder Cursor**: Custom 14px camera symbol cursor with interactive expanding viewfinder ring and live theme color adaptation.
-- **Section Spotlight Illumination**: Interactive mouse-tracking white light glow that follows the cursor across cards and sections.
-- **Staggered Fade-In Motion**: Fluid entry transitions on section loads.
+### 3. Composable Creator Discovery & Search
+- Multi-attribute discovery filtering by tool, specialization, rate, style, location, and keywords with graceful zero-result empty states.
 
-### 4. Creator Profile & Portfolio Inspection
-- Detailed creator profile featuring past commercial clients, verified pipeline metrics, and technical compute specs.
-- **Interactive Portfolio Inspection**: Click or hover any portfolio showcase to inspect the exact model used, 3-stage generation workflow, aspect ratios, and seed parameters.
+### 4. AI-Assisted Brief Builder (`/api/ai/generate-brief`)
+- Converts raw creative ideas into production-ready briefs via multi-engine AI inference:
+  1. **Groq Cloud** (`Llama-3.3-70b-versatile`)
+  2. **Google Gemini** (`gemini-1.5-flash`)
+  3. **CreateAI Neural Engine** (Local deterministic fallback)
+- Every response exposes a clear `provider` origin badge in the UI.
 
-### 5. AI-Assisted Campaign Brief Builder (`/api/ai/generate-brief`)
-- Convert rough creative concepts (e.g., *"electric supercar in rainy cyberpunk city"*) into structured production parameters in seconds.
-- **Multi-Engine AI Inference**:
-  - **Groq Cloud**: Real-time ultra-fast inference with `llama-3.3-70b-versatile`.
-  - **Google Gemini**: Integration with Gemini 1.5 Flash.
-  - **Built-in Neural Engine**: Deterministic fallback engine when offline or testing without API keys.
+### 5. Deterministic Explainable Creator Matching Engine (`/api/matching`)
+- Evaluates creators against briefs using a 7-factor weighted formula:
+  - **40%** Semantic / Intent Similarity
+  - **20%** Required Skills Match
+  - **15%** AI Tools & Models Match
+  - **10%** Content-Type Match
+  - **5%** Aspect Ratio & Format Match
+  - **5%** Commercial Buyout Rights
+  - **5%** Track Record & Rating
+- Displays match percentages and itemized empirical reasons.
 
-### 6. Role-Based Onboarding & Studio Profiles
-- **Brand Accounts**: Post commercial briefs, manage escrow, commission verified creators.
-- **Creator Accounts**: Set hourly rates (₹/hr), select supported tools, upload portfolio pieces, and publish live to the marketplace immediately.
+### 6. Transparent Creator Verification Trust Signals
+- Audit panel certifying 5 core trust signals:
+  - `✓ Platform Verified`
+  - `✓ Portfolio Evidence Verified`
+  - `✓ Tool & Model Stack Evidence`
+  - `✓ Workflow Evidence Provided`
+  - `✓ Commercial Rights Declared`
 
----
-
-## 🛠️ Tech Stack
-
-- **Framework**: Next.js 14.2 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Icons**: Lucide React
-- **AI Inference**: Groq SDK / Google Gemini API / Custom Neural Parser
+### 7. Full Brand ⇄ Creator Journey
+- End-to-end workflow: Create brief → AI synthesis → Rank creators → Inspect portfolio → Audit verification → Submit proposal.
 
 ---
 
-## 🚀 Getting Started
+## 🛠️ Architecture & Tech Stack
+
+```
+CreateAI/
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── ai/generate-brief/  # Multi-engine AI brief generation
+│   │   │   ├── briefs/             # REST endpoint for campaign briefs
+│   │   │   ├── creators/           # REST endpoint for creator directory
+│   │   │   ├── matching/           # Explainable creator matching engine
+│   │   │   └── engagements/        # Engagement proposals endpoint
+│   │   ├── globals.css             # Theme tokens & custom animations
+│   │   ├── layout.tsx              # Root layout with CameraCursor
+│   │   └── page.tsx                # Main marketplace view controller
+│   ├── components/                 # 17 React UI components
+│   ├── data/
+│   │   └── mockData.ts             # Curated dataset & fallback seeds
+│   ├── lib/
+│   │   ├── ai/                     # Groq, Gemini, and Fallback providers
+│   │   ├── models/                 # Mongoose schemas (Creator, Brief, MatchResult, Engagement)
+│   │   ├── matching.ts             # Hybrid matching calculation engine
+│   │   └── mongodb.ts              # MongoDB serverless connection caching
+│   ├── scripts/
+│   │   └── seed.ts                 # Programmatic MongoDB database seeder
+│   └── types/
+│       └── index.ts                # TypeScript domain interfaces
+```
+
+---
+
+## 🚀 Quick Start Guide
 
 ### Prerequisites
-- Node.js 18+ 
-- npm / yarn / pnpm
+- Node.js 18+
+- MongoDB instance (local `mongodb://127.0.0.1:27017/createai-marketplace` or MongoDB Atlas URI)
 
-### Installation
+### Setup & Execution
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd createai-marketplace
-
-# Install dependencies
+# 1. Install dependencies
 npm install
 
-# Run the development server
+# 2. Configure environment variables (optional)
+cp .env.example .env.local
+
+# 3. Seed MongoDB database
+npm run seed
+
+# 4. Run TypeScript compilation check
+npx tsc --noEmit
+
+# 5. Start development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000).
 
 ### Production Build
 
 ```bash
-# Build the production bundle
+# Build production bundle
 npm run build
 
-# Start the production server
+# Start production server
 npm run start
 ```
 
 ---
 
-## 📁 Project Architecture
+## 📚 Documentation Index
 
-```
-createai-marketplace/
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── ai/generate-brief/  # Live AI brief generation route (Groq / Gemini)
-│   │   │   ├── briefs/             # REST endpoint for campaign briefs
-│   │   │   ├── creators/           # REST endpoint for creator directory
-│   │   │   └── live-sync/          # Live real-person creator sync
-│   │   ├── globals.css             # Theme definitions, glows & animations
-│   │   ├── layout.tsx              # Root HTML layout with CameraCursor
-│   │   └── page.tsx                # Main marketplace view controller
-│   ├── components/
-│   │   ├── ApiConfigModal.tsx      # Groq / Gemini API key configuration
-│   │   ├── AuthModal.tsx           # Role-based login & creator registration
-│   │   ├── BriefBuilder.tsx        # AI Brief Co-Pilot generator
-│   │   ├── BriefsFeed.tsx          # Open brand campaign briefs board
-│   │   ├── CameraCursor.tsx        # Custom adaptive camera viewfinder cursor
-│   │   ├── CreatorCard.tsx         # Creator showcase card with INR rates
-│   │   ├── CreatorProfile.tsx      # Comprehensive creator studio & portfolio view
-│   │   ├── FadeInSection.tsx       # Smooth entrance motion component
-│   │   ├── HireModal.tsx           # Direct hiring & commission proposal modal
-│   │   ├── Navbar.tsx              # Top navigation with Theme toggle & live sync
-│   │   ├── PortfolioModal.tsx      # Click-to-inspect portfolio modal
-│   │   └── SavedModal.tsx          # Shortlisted creators drawer
-│   ├── data/
-│   │   └── mockData.ts             # Curated creators and briefs dataset
-│   └── types/
-│       └── index.ts                # TypeScript interfaces & domain models
-├── public/                         # Static assets
-├── tailwind.config.js              # Tailwind styling configuration
-└── tsconfig.json                   # TypeScript compiler configuration
-```
-
-## 🌐 Live Production Deployment & Public Access
-
-- **Live Production URL**: [https://createai-marketplace.vercel.app](https://createai-marketplace.vercel.app)
-- **GitHub Repository**: [https://github.com/hanifmd2613/CreateAI](https://github.com/hanifmd2613/CreateAI)
-- **Status**: **100% Lifetime Public Access** — Free, open-source, and globally accessible without paywalls, subscription fees, or expiration.
-- **Instant Entry**: Anyone can explore the full creator directory, use the AI Brief Builder co-pilot, and test client-creator chats instantly via the 1-Click Public Guest Access button or by registering with an email OTP.
+- [docs/EXECUTION_GUIDE.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/EXECUTION_GUIDE.md) — Comprehensive Execution & Deployment Guide
+- [docs/FINAL_AUDIT_REPORT.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/FINAL_AUDIT_REPORT.md) — Final Forensic Audit & Verification Report
+- [docs/HACKATHON_REQUIREMENTS.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/HACKATHON_REQUIREMENTS.md) — Hackathon Requirement Compliance Matrix
+- [docs/ARCHITECTURE.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/ARCHITECTURE.md) — System Architecture & Component Flowcharts
+- [docs/API.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/API.md) — REST API Documentation
+- [docs/DATA_MODEL.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/DATA_MODEL.md) — MongoDB Schemas & Data Model
+- [docs/DEMO_SCRIPT.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/DEMO_SCRIPT.md) — Judge Demo Script (NovaPhone Campaign Scenario)
+- [docs/SMOKE_TEST.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/SMOKE_TEST.md) — 13-Step Smoke Test Suite
+- [docs/KNOWN_LIMITATIONS.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/KNOWN_LIMITATIONS.md) — Technical Scope & Limitations
+- [docs/REPOSITORY_AUDIT.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/REPOSITORY_AUDIT.md) — Complete Codebase Audit
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — granting perpetual, irrevocable lifetime rights to use, modify, distribute, and deploy publicly worldwide. See [LICENSE](LICENSE) for details.
+MIT License — free, open-source, perpetual. See [LICENSE](LICENSE) for details.

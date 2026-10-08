@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    // User Roles Collection (users/{uid})
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(userId);
+    }
+
+    // Creators Collection (creators/{creatorId})
+    match /creators/{creatorId} {
+      // Unauthenticated & Authenticated users can read public creator directory
+      allow read: if true;
+      
+      // Creators can create and edit their own profile
+      allow create: if isAuthenticated() && request.resource.data.id == creatorId;
+      allow update: if isOwner(creatorId) || (isAuthenticated() && request.resource.data.id == creatorId);
+      allow delete: if false;
+    }
+
+    // Portfolios Collection (portfolios/{portfolioId})
+    match /portfolios/{portfolioId} {
+      // Public read access for creator discovery & portfolio modal
+      allow read: if true;
+      
+      // Creators can manage their own portfolio items
+      allow create: if isAuthenticated() && (request.resource.data.creatorId == request.auth.uid || isOwner(request.resource.data.creatorId));
+      allow update, delete: if isAuthenticated() && (resource.data.creatorId == request.auth.uid || isOwner(resource.data.creatorId));
+    }
+
+    // Briefs Collection (briefs/{briefId})
+    match /briefs/{briefId} {
+      // Public read access for marketplace briefs feed
+      allow read: if true;
+      
+      // Brands can create and update campaign briefs
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (resource.data.brandId == request.auth.uid || isOwner(resource.data.brandId));
+      allow delete: if isAuthenticated() && (resource.data.brandId == request.auth.uid || isOwner(resource.data.brandId));
+    }
+
+    // Match Results Collection (matches/{matchId})
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+    }
+
+    // Engagements / Proposals Collection (engagements/{engagementId})
+    match /engagements/{engagementId} {
+      // Participants (Brand or Creator) can read engagement proposals
+      allow read: if isAuthenticated() && (
+        resource.data.brandId == request.auth.uid ||
+        resource.data.creatorId == request.auth.uid
+      );
+      
+      // Brands can create proposals
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.brandId == request.auth.uid ||
+        resource.data.creatorId == request.auth.uid
+      );
+    }
+  }
+}
