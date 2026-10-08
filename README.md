@@ -125,7 +125,15 @@ createai-marketplace/
 └── tsconfig.json                   # TypeScript compiler configuration
 ```
 
+## 🌐 Live Production Deployment & Public Access
+
+- **Live Production URL**: [https://createai-marketplace.vercel.app](https://createai-marketplace.vercel.app)
+- **GitHub Repository**: [https://github.com/hanifmd2613/CreateAI](https://github.com/hanifmd2613/CreateAI)
+- **Status**: **100% Lifetime Public Access** — Free, open-source, and globally accessible without paywalls, subscription fees, or expiration.
+- **Instant Entry**: Anyone can explore the full creator directory, use the AI Brief Builder co-pilot, and test client-creator chats instantly via the 1-Click Public Guest Access button or by registering with an email OTP.
+
 ---
 
 ## 📄 License
-MIT License. Free for commercial and educational use.
+
+This project is licensed under the **MIT License** — granting perpetual, irrevocable lifetime rights to use, modify, distribute, and deploy publicly worldwide. See [LICENSE](LICENSE) for details.

@@ -84,6 +84,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="text-[10px] font-medium tracking-wide px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
                   PRO
                 </span>
+                <span className="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-medium text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Public Access • Lifetime Free
+                </span>
               </div>
             </button>
 

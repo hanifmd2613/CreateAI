@@ -18,7 +18,8 @@ import {
   MapPin, 
   Wand2,
   Lock,
-  Radio
+  Radio,
+  Globe
 } from 'lucide-react';
 
 interface AuthGateProps {
@@ -195,6 +196,26 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
     setOtpSentNotice(null);
   };
 
+  // Instant Lifetime Public Access entry handler
+  const handlePublicLifetimeAccess = () => {
+    const publicUser: UserAccount = {
+      id: 'public-guest-user',
+      name: 'Public Guest Explorer',
+      email: 'public@createai.open',
+      role: 'brand',
+      avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=PublicLifetimeGuest',
+      handle: '@public_guest',
+      gender: 'male',
+      companyName: 'Open Public Access (Lifetime)',
+      isVerified: true,
+    };
+    if (onVoiceSpoken) {
+      onVoiceSpoken('Guest Explorer');
+    }
+    playAiVoiceGreeting('Guest Explorer');
+    onAuthSuccess(publicUser);
+  };
+
   const toggleTool = (tool: string) => {
     if (selectedTools.includes(tool)) {
       if (selectedTools.length > 1) {
@@ -233,6 +254,38 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
         {/* Main Card */}
         <div className="rounded-2xl bg-zinc-900/90 border border-zinc-800 backdrop-blur-xl p-6 sm:p-7 shadow-2xl space-y-6">
           
+          {/* Instant Lifetime Public Access Option */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/40 via-zinc-900 to-zinc-950 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-inner">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                <Globe className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-white tracking-tight">Lifetime Public Access</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">100% Free Forever</span>
+                </div>
+                <p className="text-[11px] text-zinc-400 leading-tight">Explore creators, live chat, and the AI brief builder without signup.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handlePublicLifetimeAccess}
+              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs whitespace-nowrap transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Instant Entry</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="relative flex items-center justify-center">
+            <div className="border-t border-zinc-800 w-full" />
+            <span className="bg-zinc-900 px-3 text-[10px] text-zinc-500 font-medium uppercase tracking-wider shrink-0">
+              or sign in / register with email otp
+            </span>
+            <div className="border-t border-zinc-800 w-full" />
+          </div>
+
           {/* Top Tabs: Sign In vs Register */}
           <div className="flex p-1 bg-zinc-950 rounded-xl border border-zinc-800">
             <button
