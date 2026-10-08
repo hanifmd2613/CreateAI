@@ -29,6 +29,10 @@ interface BriefBuilderProps {
 
 const IDEA_PRESETS = [
   {
+    label: '⚡ NovaPhone Hackathon Demo',
+    prompt: 'NovaPhone: Create a futuristic 30-second smartphone launch film. Showcase holographic display assembly, liquid metal casing, macro camera sweeps in rainy cyber city for Reels (9:16).',
+  },
+  {
     label: 'Electric Supercar Commercial',
     prompt: 'High-speed cinematic automotive film of an electric supercar moving through night metropolitan rain with hyperrealistic light reflections and sound design.',
   },

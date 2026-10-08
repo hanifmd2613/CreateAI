@@ -19,6 +19,7 @@ import {
   Play,
   MessageSquare
 } from 'lucide-react';
+import { VerificationPanel } from './VerificationPanel';
 
 interface CreatorProfileProps {
   creator: Creator;
@@ -203,37 +204,8 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
 
           </div>
 
-          {/* Verified Workflow Seal */}
-          {creator.isVerified && (
-            <div 
-              onMouseMove={handleCardMouseMove}
-              className="mb-6 p-4 rounded-lg bg-zinc-900 border border-zinc-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 section-glow relative"
-            >
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded bg-zinc-800 text-emerald-400 shrink-0 mt-0.5 md:mt-0">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-xs font-bold text-white uppercase tracking-wider">
-                      Verified AI Workflow Guarantee
-                    </h2>
-                    <span className="text-[10px] bg-zinc-800 text-emerald-400 font-mono px-2 py-0.2 rounded border border-zinc-700">
-                      Audit Score: {creator.verifiedDetails?.safetyScore || 99.8}%
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed max-w-2xl">
-                    Audited model checkpoints ({creator.verifiedDetails?.certifiedPipeline}) with deterministic seed consistency and full legal commercial buyout rights.
-                  </p>
-                </div>
-              </div>
-
-              <div className="text-left md:text-right shrink-0">
-                <span className="text-[10px] text-zinc-500 block uppercase font-medium">Compliance</span>
-                <span className="text-xs font-semibold text-zinc-200">Commercial Buyout Ready</span>
-              </div>
-            </div>
-          )}
+          {/* Verification Trust & Evidence Signals Breakdown */}
+          <VerificationPanel creator={creator} className="mb-6" />
 
           {/* Bio & Skills Tag Row */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">

@@ -14,6 +14,7 @@ import { AuthGate } from '../components/AuthGate';
 import { ChatModal } from '../components/ChatModal';
 import { SystemAssistantModal } from '../components/SystemAssistantModal';
 import { ApiConfigModal } from '../components/ApiConfigModal';
+import { ExplainableMatchModal } from '../components/ExplainableMatchModal';
 import { FadeInSection } from '../components/FadeInSection';
 import { 
   MOCK_CREATORS, 
@@ -320,10 +321,13 @@ export default function Home() {
     setChatModalOpen(true);
   };
 
+  const [matchingBrief, setMatchingBrief] = useState<Brief | null>(null);
+
   // Publish New Brief from Builder
   const handlePublishBrief = (newBrief: Brief) => {
     setBriefs([newBrief, ...briefs]);
-    showToast(`Campaign Brief "${newBrief.title}" published with commercial buyout clearance!`);
+    setMatchingBrief(newBrief);
+    showToast(`Campaign Brief "${newBrief.title}" published! Displaying explainable creator matches.`);
   };
 
   // Direct Hire Modal trigger
@@ -353,7 +357,7 @@ export default function Home() {
       c.tools.some(t => t.toLowerCase().includes(q)) ||
       c.location.toLowerCase().includes(q) ||
       c.bio.toLowerCase().includes(q) ||
-      c.portfolio.some(p => p.title.toLowerCase().includes(q) || p.specificModel.toLowerCase().includes(q))
+      c.portfolio.some(p => p.title.toLowerCase().includes(q) || (p.specificModel && p.specificModel.toLowerCase().includes(q)) || (p.model && p.model.toLowerCase().includes(q)))
     );
   }, [creators, searchQuery]);
 
@@ -373,8 +377,8 @@ export default function Home() {
           const matchesLocation = creator.location.toLowerCase().includes(q);
           const matchesPortfolio = creator.portfolio.some(p => 
             p.title.toLowerCase().includes(q) || 
-            p.specificModel.toLowerCase().includes(q) ||
-            p.workflowDescription.toLowerCase().includes(q)
+            (p.specificModel && p.specificModel.toLowerCase().includes(q)) ||
+            (p.workflowDescription && p.workflowDescription.toLowerCase().includes(q))
           );
 
           if (!matchesName && !matchesHandle && !matchesBio && !matchesSpec && !matchesSkills && !matchesTools && !matchesLocation && !matchesPortfolio) {
