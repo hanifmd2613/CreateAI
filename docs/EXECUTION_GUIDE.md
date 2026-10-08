@@ -7,15 +7,16 @@ This guide provides end-to-end instructions for installing, configuring, seeding
 ## 📋 Table of Contents
 
 1. [Prerequisites & System Requirements](#1-prerequisites--system-requirements)
-2. [Environment Configuration](#2-environment-configuration)
-3. [Installation & Setup](#3-installation--setup)
-4. [Database Seeding](#4-database-seeding)
-5. [Running in Development Mode](#5-running-in-development-mode)
-6. [Building & Running in Production](#6-building--running-in-production)
-7. [Verification & Type Checking](#7-verification--type-checking)
-8. [End-to-End Demo Trajectory (NovaPhone Scenario)](#8-end-to-end-demo-trajectory-novaphone-scenario)
-9. [API Testing with cURL / Postman](#9-api-testing-with-curl--postman)
-10. [Troubleshooting & Common Issues](#10-troubleshooting--common-issues)
+2. [Firebase Setup & Security Rules](#2-firebase-setup--security-rules)
+3. [Environment Configuration](#3-environment-configuration)
+4. [Installation & Setup](#4-installation--setup)
+5. [Database Seeding](#5-database-seeding)
+6. [Running in Development Mode](#6-running-in-development-mode)
+7. [Building & Running in Production](#7-building--running-in-production)
+8. [Verification & Type Checking](#8-verification--type-checking)
+9. [End-to-End Demo Trajectory (NovaPhone Scenario)](#9-end-to-end-demo-trajectory-novaphone-scenario)
+10. [API Testing with cURL / Postman](#10-api-testing-with-curl--postman)
+11. [Troubleshooting & Common Issues](#11-troubleshooting--common-issues)
 
 ---
 
@@ -26,14 +27,58 @@ Ensure your environment meets the following specifications:
 - **Operating System**: Windows 10/11, macOS, or Linux
 - **Node.js**: `v18.17.0` or higher (Recommended: Node 20 LTS)
 - **Package Manager**: `npm` v9+ (or `pnpm` / `yarn`)
-- **Database**:
-  - **Local MongoDB**: MongoDB Community Edition (`mongodb://127.0.0.1:27017`)
-  - **OR Cloud MongoDB**: MongoDB Atlas Cluster URI
-  - *(Note: If MongoDB is unavailable during evaluation, the app falls back gracefully to in-memory runtime objects).*
+- **Backend Services**:
+  - **Firebase**: Firebase Authentication, Cloud Firestore, Firebase Storage (`src/lib/firebase.ts`)
+  - **MongoDB (Fallback / Alternative)**: Local MongoDB (`mongodb://127.0.0.1:27017`) or Cloud MongoDB Atlas
+  - *(Note: If backend services are unconfigured during evaluation, the app falls back gracefully to in-memory runtime objects).*
 
 ---
 
-## 2. Environment Configuration
+## 2. Firebase Setup & Security Rules
+
+### Step 1: Create a Firebase Project
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Click **"Add Project"** and name it `createai-marketplace`.
+3. Disable Google Analytics (optional for hackathon MVP) and click **Create Project**.
+
+### Step 2: Enable Firebase Services (100% Free Spark Plan - No Credit Card Required)
+1. **Authentication**: Navigate to **Build → Authentication** → Click **Get Started** → Enable **Email/Password**. *(100% Free)*
+2. **Cloud Firestore**: Navigate to **Build → Firestore Database** → Click **Create Database** → Select **Start in Production Mode**. *(100% Free)*
+3. **Media Storage (Zero-Billing Strategy)**: 
+   - **No Blaze Plan / Credit Card Needed**: Firebase Storage sometimes asks for a Blaze billing upgrade in certain regions. You can **SKIP Firebase Storage entirely** and stay on the 100% FREE Firebase Spark Plan!
+   - Media URLs (images, videos, thumbnails, audio showcases) are stored as direct HTTPS CDN URLs (e.g. Unsplash, Imgur, Cloudinary Free Tier, or DiceBear) directly inside Firestore document fields (`mediaUrl`, `thumbnail`, `avatar`).
+
+### Step 3: Deploy Security Rules
+The repository includes production security rules in [`firestore.rules`](file:///c:/tempp/projects/CreatorMatch-AI/firestore.rules) and [`storage.rules`](file:///c:/tempp/projects/CreatorMatch-AI/storage.rules). You can deploy them using **Option A (Web Console - Fastest)** or **Option B (Firebase CLI)**:
+
+#### Option A: Deploy via Firebase Web Console (Recommended for Quick Demo Setup)
+1. **Firestore Database Rules**:
+   - Copy all contents from [`firestore.rules`](file:///c:/tempp/projects/CreatorMatch-AI/firestore.rules).
+   - Go to [Firebase Console](https://console.firebase.google.com/) → Open project `createai-marketplace`.
+   - Click **Firestore Database** in sidebar → Click **Rules** tab.
+   - Replace the default text with the contents of [`firestore.rules`](file:///c:/tempp/projects/CreatorMatch-AI/firestore.rules) → Click **Publish**.
+
+2. **Storage Rules (Optional - Only if Firebase Storage is enabled)**:
+   - Copy all contents from [`storage.rules`](file:///c:/tempp/projects/CreatorMatch-AI/storage.rules).
+   - Go to [Firebase Console](https://console.firebase.google.com/) → Open project `createai-marketplace`.
+   - Click **Storage** in sidebar → Click **Rules** tab.
+   - Replace default text with the contents of [`storage.rules`](file:///c:/tempp/projects/CreatorMatch-AI/storage.rules) → Click **Publish**.
+
+#### Option B: Deploy via Firebase CLI (Automated Deployment)
+```bash
+# 1. Login to Firebase CLI
+npx firebase login
+
+# 2. Link your local project to your Firebase project ID
+npx firebase use --add
+
+# 3. Deploy Firestore & Storage rules using configured firebase.json
+npx firebase deploy --only firestore:rules,storage
+```
+
+---
+
+## 3. Environment Configuration
 
 1. Create a `.env.local` file in the project root:
 
@@ -45,13 +90,22 @@ cp .env.example .env.local
 
 ```env
 # ==============================================================================
-# DATABASE PERSISTENCE
+# FIREBASE BACKEND CONFIGURATION
 # ==============================================================================
-# Local MongoDB connection
-MONGODB_URI=mongodb://127.0.0.1:27017/createai-marketplace
+# Firebase Client SDK Credentials (from Firebase Console -> Project Settings -> General)
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key_here
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=createai-marketplace.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=createai-marketplace
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=createai-marketplace.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789012
+NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789012:web:abcdef1234567890
 
-# MongoDB Atlas alternative:
-# MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/createai-marketplace
+# ==============================================================================
+# DATABASE PERSISTENCE (MONGODB FALLBACK/ALTERNATIVE)
+# ==============================================================================
+# For local development: mongodb://127.0.0.1:27017/createai-marketplace
+# For MongoDB Atlas: mongodb+srv://<username>:<password>@cluster.mongodb.net/createai-marketplace
+MONGODB_URI=mongodb://127.0.0.1:27017/createai-marketplace
 
 # ==============================================================================
 # MULTI-ENGINE AI PROVIDER KEYS (OPTIONAL)
@@ -72,7 +126,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ---
 
-## 3. Installation & Setup
+## 4. Installation & Setup
 
 Cleanly install all required Node.js dependencies:
 
@@ -86,9 +140,9 @@ npm install
 
 ---
 
-## 4. Database Seeding
+## 5. Database Seeding
 
-Seed MongoDB with 4 verified Gen-AI creators, portfolios, workflow manifests, and the **NovaPhone 9:16 vertical launch campaign** demo brief:
+Seed the database with 4 verified Gen-AI creators, portfolios, workflow manifests, and the **NovaPhone 9:16 vertical launch campaign** demo brief:
 
 ```bash
 npm run seed
@@ -107,7 +161,7 @@ Precomputed 4 MatchResult records for NovaPhone Demo Brief.
 
 ---
 
-## 5. Running in Development Mode
+## 6. Running in Development Mode
 
 Start the Next.js development server with hot module reloading:
 
@@ -116,11 +170,11 @@ npm run dev
 ```
 
 - **Application URL**: [http://localhost:3000](http://localhost:3000)
-- The app will automatically connect to MongoDB and activate the viewfinder camera cursor and obsidian dark-mode interface.
+- The app will automatically connect to Firebase & MongoDB and activate the viewfinder camera cursor and obsidian dark-mode interface.
 
 ---
 
-## 6. Building & Running in Production
+## 7. Building & Running in Production
 
 Validate production compilation and start the production server:
 
@@ -134,7 +188,7 @@ npm run start
 
 ---
 
-## 7. Verification & Type Checking
+## 8. Verification & Type Checking
 
 To ensure code health before submission or live judging, run:
 
@@ -148,7 +202,7 @@ npm run lint
 
 ---
 
-## 8. End-to-End Demo Trajectory (NovaPhone Scenario)
+## 9. End-to-End Demo Trajectory (NovaPhone Scenario)
 
 Follow these exact steps during judge evaluation to demonstrate the complete Brand ⇄ Creator workflow:
 
@@ -158,7 +212,7 @@ sequenceDiagram
     actor Brand as Enterprise Brand (NovaPhone)
     participant UI as Frontend App
     participant AI as AI Brief Builder API
-    participant DB as MongoDB Database
+    participant DB as Firestore / MongoDB Database
     participant Engine as Hybrid Matching Engine
     actor Creator as Ranked AI Director (Karthik)
 
@@ -167,7 +221,7 @@ sequenceDiagram
     UI->>AI: 3. POST /api/ai/generate-brief
     AI-->>UI: 4. Returns structured 9:16 brief + AI Provider Badge
     Brand->>UI: 5. Click "Save Brief to Marketplace"
-    UI->>DB: 6. POST /api/briefs (Persist to MongoDB)
+    UI->>DB: 6. POST /api/briefs (Persist to Firestore / MongoDB)
     Brand->>UI: 7. Click "Find Matching Creators"
     UI->>Engine: 8. POST /api/matching?briefId=brief-novaphone-demo
     Engine-->>UI: 9. Returns ranked creators (Karthik #1 - 96% Match)
@@ -176,7 +230,7 @@ sequenceDiagram
     Brand->>UI: 12. Inspect Creator Profile & Trust Signals Panel
     Brand->>UI: 13. Inspect Portfolio Workflow (Veo + Kling)
     Brand->>UI: 14. Click "Hire Creator" & Send Proposal
-    UI->>DB: 15. POST /api/engagements (Proposal saved in MongoDB)
+    UI->>DB: 15. POST /api/engagements (Proposal saved in database)
 ```
 
 ### Detailed Step Breakdown:
@@ -201,7 +255,7 @@ sequenceDiagram
 
 ---
 
-## 9. API Testing with cURL / Postman
+## 10. API Testing with cURL / Postman
 
 ### A. AI Brief Generation
 ```bash
@@ -242,10 +296,11 @@ curl -X POST http://localhost:3000/api/briefs \
 
 ---
 
-## 10. Troubleshooting & Common Issues
+## 11. Troubleshooting & Common Issues
 
 | Symptom | Probable Cause | Solution |
 |---|---|---|
+| `Firebase SDK warning` in console | Firebase keys unset in `.env.local` | Firebase features fall back gracefully to local objects. To connect Firebase, add `NEXT_PUBLIC_FIREBASE_*` variables in `.env.local`. |
 | `MongoDB connection warning` in logs | Local MongoDB service is not running | Run `mongod` or check `MONGODB_URI` in `.env.local`. The app will fallback gracefully to in-memory runtime objects. |
 | `port 3000 is already in use` | Another process is using port 3000 | Kill process on 3000 (`npx kill-port 3000`) or run `npm run dev -- -p 3001`. |
 | AI Brief Builder shows `CreateAI Neural Engine` | `GROQ_API_KEY` and `GOOGLE_GEMINI_API_KEY` are unset | Optional: add valid API keys in `.env.local` or client **API Config Modal**. Fallback engine works out-of-the-box. |
