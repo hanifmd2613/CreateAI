@@ -1,4 +1,4 @@
-# CreateAI — Data Model Specification
+# GenCraft — Data Model Specification
 
 ## 1. Domain Models Overview
 

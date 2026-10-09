@@ -49,7 +49,7 @@ export const SystemAssistantModal: React.FC<SystemAssistantModalProps> = ({
     {
       id: 'bot-welcome',
       sender: 'bot',
-      text: `**Hello! I am your CreateAI System Assistant powered by Google Gemini.**\n\nI can answer questions on how to use CreateAI, commission creators, build automated briefs, understand our Indian Rupee (₹) escrow, or compare Gen-AI models (*Veo, Kling, Sora, Flux.1, ElevenLabs, Pika*).\n\nHow can I help you today?`,
+      text: `**Hello! I am your GenCraft System Assistant powered by Google Gemini.**\n\nI can answer questions on how to use GenCraft, commission creators, build automated briefs, understand our Indian Rupee (₹) escrow, or compare Gen-AI models (*Veo, Kling, Sora, Flux.1, ElevenLabs, Pika*).\n\nHow can I help you today?`,
       timestamp: 'Just now'
     }
   ]);
@@ -107,7 +107,7 @@ export const SystemAssistantModal: React.FC<SystemAssistantModalProps> = ({
         const botMsg: Message = {
           id: `bot-${Date.now()}`,
           sender: 'bot',
-          text: `**CreateAI Guidance:**\n\nTo discover specialized creators, use the top search bar to filter by field or tools (Veo, Kling, Sora, Flux.1, ElevenLabs, Pika). You can directly chat with creator employees using the **Chat** button, or head to **Post a Brief** and use the **AI Assist** button to auto-structure your campaign brief with milestone escrow in Indian Rupees (₹).`,
+          text: `**GenCraft Guidance:**\n\nTo discover specialized creators, use the top search bar to filter by field or tools (Veo, Kling, Sora, Flux.1, ElevenLabs, Pika). You can directly chat with creator employees using the **Chat** button, or head to **Post a Brief** and use the **AI Assist** button to auto-structure your campaign brief with milestone escrow in Indian Rupees (₹).`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
         setMessages(prev => [...prev, botMsg]);
@@ -117,7 +117,7 @@ export const SystemAssistantModal: React.FC<SystemAssistantModalProps> = ({
       const botMsg: Message = {
         id: `bot-${Date.now()}`,
         sender: 'bot',
-        text: `**CreateAI System Helper:**\n\nYou can explore vetted Gen-AI creators on the Discover page, post a campaign in the Brief Builder with one-click AI generation, and chat directly with creators. All payments are secured in Indian Rupees (₹) with commercial buyout rights.`,
+        text: `**GenCraft System Helper:**\n\nYou can explore vetted Gen-AI creators on the Discover page, post a campaign in the Brief Builder with one-click AI generation, and chat directly with creators. All payments are secured in Indian Rupees (₹) with commercial buyout rights.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botMsg]);
@@ -150,7 +150,7 @@ export const SystemAssistantModal: React.FC<SystemAssistantModalProps> = ({
                 Gemini
               </span>
             </div>
-            <span className="text-[10px] text-zinc-400">Click to learn how to use CreateAI</span>
+            <span className="text-[10px] text-zinc-400">Click to learn how to use GenCraft</span>
           </div>
         </button>
       )}
@@ -174,7 +174,7 @@ export const SystemAssistantModal: React.FC<SystemAssistantModalProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold text-white">CreateAI System Assistant</h2>
+                    <h2 className="text-sm font-semibold text-white">GenCraft System Assistant</h2>
                     <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
                       Gemini
                     </span>
@@ -268,7 +268,7 @@ export const SystemAssistantModal: React.FC<SystemAssistantModalProps> = ({
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Ask Gemini anything about using CreateAI..."
+                  placeholder="Ask Gemini anything about using GenCraft..."
                   className="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
                 />
 

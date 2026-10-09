@@ -1,4 +1,4 @@
-# CreateAI — Hackathon Smoke Test Suite
+# GenCraft — Hackathon Smoke Test Suite
 
 This document defines the 13-step smoke test procedure to verify end-to-end functionality before judging.
 

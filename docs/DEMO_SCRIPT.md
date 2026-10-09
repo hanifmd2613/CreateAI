@@ -1,8 +1,8 @@
-# CreateAI — Hackathon Demo Script & Judge Guide
+# GenCraft — Hackathon Demo Script & Judge Guide
 
 ## Demo Scenario: NovaPhone Global 30-Second Launch Campaign
 
-**Goal**: Demonstrate how an enterprise brand uses `CreateAI` to turn a raw concept into a structured campaign brief, rank Gen-AI directors via an explainable matching engine, inspect verified portfolio workflows, and hire a director in under 2 minutes.
+**Goal**: Demonstrate how an enterprise brand uses `GenCraft` to turn a raw concept into a structured campaign brief, rank Gen-AI directors via an explainable matching engine, inspect verified portfolio workflows, and hire a director in under 2 minutes.
 
 ---
 
@@ -18,7 +18,7 @@
    > *"Futuristic 30-second smartphone launch film. Showcase holographic display assembly, liquid metal casing, micro-camera projection, and high-speed urban drift in rain-slicked city streets. Requires 9:16 vertical cut for Instagram Reels & YouTube Shorts with full commercial buyout."*
 3. Click **"Synthesize Brief with AI"**.
 4. Observe the synthesis sequence:
-   - Notice the provider indicator badge (`⚡ Synthesized via Groq Llama-3.3-70B`, `Google Gemini 1.5 Flash`, or `CreateAI Neural Engine`).
+   - Notice the provider indicator badge (`⚡ Synthesized via Groq Llama-3.3-70B`, `Google Gemini 1.5 Flash`, or `GenCraft Neural Engine`).
    - Review auto-populated fields: Title, Content Type (`AI Commercial Video`), Style (`Cinematic Hyperrealism`), Format (`9:16`), Budget (`₹6,50,000`), Deadline (`3 Days`), and Required Tools (`Veo`, `Kling`, `ElevenLabs`).
 5. Click **"Save Brief to Marketplace"**.
 

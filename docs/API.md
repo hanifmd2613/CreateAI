@@ -1,4 +1,4 @@
-# CreateAI — REST API Documentation
+# GenCraft — REST API Documentation
 
 All API routes return standardized JSON envelopes:
 

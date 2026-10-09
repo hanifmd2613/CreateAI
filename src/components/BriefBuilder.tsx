@@ -64,7 +64,7 @@ export const BriefBuilder: React.FC<BriefBuilderProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [hasGenerated, setHasGenerated] = useState(false);
-  const [activeProviderName, setActiveProviderName] = useState<string>('CreateAI Neural Engine');
+  const [activeProviderName, setActiveProviderName] = useState<string>('GenCraft Neural Engine');
 
   // Form Fields State
   const [title, setTitle] = useState('');
@@ -232,7 +232,7 @@ export const BriefBuilder: React.FC<BriefBuilderProps> = ({
             ? 'Groq Cloud (Llama 3.3 70B)' 
             : data.provider === 'gemini' 
             ? 'Google Gemini 1.5 Flash' 
-            : 'CreateAI Neural Engine';
+            : 'GenCraft Neural Engine';
           applyBriefData(data.brief, providerLabel);
           return;
         }
@@ -241,12 +241,12 @@ export const BriefBuilder: React.FC<BriefBuilderProps> = ({
       // Seamless Instant Fallback
       await new Promise(r => setTimeout(r, 400));
       const fallbackBrief = synthesizeBriefFallback(promptToUse);
-      applyBriefData(fallbackBrief, 'CreateAI Neural Synthesis Engine');
+      applyBriefData(fallbackBrief, 'GenCraft Neural Synthesis Engine');
 
     } catch (err) {
       console.warn('Live API request failed, applying neural fallback:', err);
       const fallbackBrief = synthesizeBriefFallback(promptToUse);
-      applyBriefData(fallbackBrief, 'CreateAI Neural Synthesis Engine');
+      applyBriefData(fallbackBrief, 'GenCraft Neural Synthesis Engine');
     } finally {
       setIsGenerating(false);
     }

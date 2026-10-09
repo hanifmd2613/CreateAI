@@ -15,7 +15,7 @@ export const VerificationPanel: React.FC<VerificationPanelProps> = ({ creator, c
     {
       label: 'Platform Verified',
       status: creator.isVerified || v.platformVerified !== false,
-      desc: 'Account identity & production standards certified by CreateAI Audit team.',
+      desc: 'Account identity & production standards certified by GenCraft Audit team.',
       icon: ShieldCheck,
       color: 'text-emerald-400',
     },

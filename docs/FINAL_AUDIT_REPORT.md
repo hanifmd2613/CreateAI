@@ -1,9 +1,9 @@
-# CreateAI — Final Hackathon Audit & Execution Report
+# GenCraft — Final Hackathon Audit & Execution Report
 
 **Date**: October 8, 2026  
 **Auditor**: Senior Full-Stack & AI Security Engineer  
 **Submission**: AI Content Creator Marketplace Hackathon  
-**Target Repository**: `CreateAI` (`c:\tempp\projects\CreatorMatch-AI`)
+**Target Repository**: `GenCraft` (`GenCraft Repository`)
 
 ---
 
@@ -19,7 +19,7 @@
 | **Storage** | **PASS** | Firebase Storage rules (`storage.rules`) enforcing path ownership `/creators/{userId}/portfolio/{fileName}`. |
 | **Security Rules** | **PASS** | Firestore Security Rules (`firestore.rules`) enforcing role-aware read/write authorization. |
 | **Database** | **PASS** | Dual persistence support: Firebase Cloud Firestore + MongoDB Mongoose serverless connection caching. |
-| **AI Brief Builder** | **PASS** | Multi-engine AI provider abstraction (`src/lib/ai/`) supporting Groq Llama-3.3, Google Gemini 1.5, and CreateAI Neural Fallback. |
+| **AI Brief Builder** | **PASS** | Multi-engine AI provider abstraction (`src/lib/ai/`) supporting Groq Llama-3.3, Google Gemini 1.5, and GenCraft Neural Fallback. |
 | **Creator Matching** | **PASS** | Deterministic 7-factor hybrid matching algorithm (40% semantic, 20% skills, 15% tools, 10% format, 5% style, 5% commercial, 5% track record). |
 | **Creator Profiles** | **PASS** | Verified workflows, rates in INR, tools (`Veo`, `Kling`, `Sora`, `Flux.1`), and 3-stage generation pipeline modal. |
 | **Verification** | **PASS** | 5-point trust signals panel certifying Platform Verified, Portfolio Evidence, Tool Stack, Workflow Evidence, and Commercial Rights. |

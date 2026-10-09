@@ -99,7 +99,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
     setIsVerifying(true);
 
     try {
-      // 1. Play natural fluent AI Voice Greeting: "Hello [name], and welcome to CreateAI."
+      // 1. Play natural fluent AI Voice Greeting: "Hello [name], and welcome to GenCraft."
       const cleanFirstName = name.trim().split(' ')[0] || 'Candidate';
       if (onVoiceSpoken) {
         onVoiceSpoken(cleanFirstName);
@@ -166,7 +166,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
               workflowDescription: `Synthesized via ${selectedTools.join(' -> ')} with deterministic seed locking.`,
               aspectRatio: '16:9',
               duration: '0:30',
-              client: 'CreateAI Showcase'
+              client: 'GenCraft Showcase'
             }
           ],
           reviews: []
@@ -201,7 +201,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
     const publicUser: UserAccount = {
       id: 'public-guest-user',
       name: 'Public Guest Explorer',
-      email: 'public@createai.open',
+      email: 'public@gencraft.open',
       role: 'brand',
       avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=PublicLifetimeGuest',
       handle: '@public_guest',
@@ -238,13 +238,13 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-medium mb-3 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>CreateAI Access Gate</span>
+            <span>GenCraft Access Gate</span>
             <span className="text-zinc-600">•</span>
             <span className="text-zinc-400 font-mono text-[11px]">Email OTP Verified</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Welcome to CreateAI
+            Welcome to GenCraft
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1.5 max-w-md mx-auto">
             The premier marketplace connecting verified Generative AI creators with national brand campaigns.
@@ -632,7 +632,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
               <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-850 flex items-center gap-2.5 text-xs text-zinc-400">
                 <Volume2 className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
                 <span>
-                  On verification, our English AI voice agent will greet: <strong className="text-zinc-200">"Hello {name.split(' ')[0] || 'Candidate'}, and welcome to CreateAI."</strong>
+                  On verification, our English AI voice agent will greet: <strong className="text-zinc-200">"Hello {name.split(' ')[0] || 'Candidate'}, and welcome to GenCraft."</strong>
                 </span>
               </div>
 
@@ -650,7 +650,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    <span>Verify Email & Enter CreateAI</span>
+                    <span>Verify Email & Enter GenCraft</span>
                     <ArrowRight className="w-4 h-4 text-zinc-900" />
                   </>
                 )}

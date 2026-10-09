@@ -1,11 +1,11 @@
-# CreateAI — Generative AI Content Creator Marketplace & Studio
+# GenCraft — Generative AI Content Creator Marketplace & Studio
 
-[![Hackathon Submission](https://img.shields.io/badge/Hackathon-AI%20Creator%20Marketplace-purple.svg)](file:///c:/tempp/projects/CreatorMatch-AI/docs/FINAL_AUDIT_REPORT.md)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](file:///c:/tempp/projects/CreatorMatch-AI/tsconfig.json)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-black.svg)](file:///c:/tempp/projects/CreatorMatch-AI/package.json)
-[![MongoDB](https://img.shields.io/badge/MongoDB-6.9-green.svg)](file:///c:/tempp/projects/CreatorMatch-AI/src/lib/mongodb.ts)
+[![Hackathon Submission](https://img.shields.io/badge/Hackathon-AI%20Creator%20Marketplace-purple.svg)](docs/FINAL_AUDIT_REPORT.md)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](tsconfig.json)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black.svg)](package.json)
+[![MongoDB](https://img.shields.io/badge/MongoDB-6.9-green.svg)](src/lib/mongodb.ts)
 
-CreateAI is an AI-native content creator marketplace connecting enterprise brands with vetted Generative AI directors and digital artists. Built with **Next.js 14 (App Router)**, **TypeScript**, **Tailwind CSS**, **MongoDB / Mongoose**, **Groq Llama-3.3 70B**, and **Google Gemini 1.5**.
+GenCraft is an AI-native content creator marketplace connecting enterprise brands with vetted Generative AI directors and digital artists. Built with **Next.js 14 (App Router)**, **TypeScript**, **Tailwind CSS**, **MongoDB / Mongoose**, **Groq Llama-3.3 70B**, and **Google Gemini 1.5**.
 
 ---
 
@@ -25,7 +25,7 @@ CreateAI is an AI-native content creator marketplace connecting enterprise brand
 - Converts raw creative ideas into production-ready briefs via multi-engine AI inference:
   1. **Groq Cloud** (`Llama-3.3-70b-versatile`)
   2. **Google Gemini** (`gemini-1.5-flash`)
-  3. **CreateAI Neural Engine** (Local deterministic fallback)
+  3. **GenCraft Neural Engine** (Local deterministic fallback)
 - Every response exposes a clear `provider` origin badge in the UI.
 
 ### 5. Deterministic Explainable Creator Matching Engine (`/api/matching`)
@@ -55,7 +55,7 @@ CreateAI is an AI-native content creator marketplace connecting enterprise brand
 ## 🛠️ Architecture & Tech Stack
 
 ```
-CreateAI/
+GenCraft/
 ├── src/
 │   ├── app/
 │   │   ├── api/
@@ -87,7 +87,7 @@ CreateAI/
 
 ### Prerequisites
 - Node.js 18+
-- MongoDB instance (local `mongodb://127.0.0.1:27017/createai-marketplace` or MongoDB Atlas URI)
+- MongoDB instance (local `mongodb://127.0.0.1:27017/gencraft-marketplace` or MongoDB Atlas URI)
 
 ### Setup & Execution
 
@@ -124,16 +124,16 @@ npm run start
 
 ## 📚 Documentation Index
 
-- [docs/EXECUTION_GUIDE.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/EXECUTION_GUIDE.md) — Comprehensive Execution & Deployment Guide
-- [docs/FINAL_AUDIT_REPORT.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/FINAL_AUDIT_REPORT.md) — Final Forensic Audit & Verification Report
-- [docs/HACKATHON_REQUIREMENTS.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/HACKATHON_REQUIREMENTS.md) — Hackathon Requirement Compliance Matrix
-- [docs/ARCHITECTURE.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/ARCHITECTURE.md) — System Architecture & Component Flowcharts
-- [docs/API.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/API.md) — REST API Documentation
-- [docs/DATA_MODEL.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/DATA_MODEL.md) — MongoDB Schemas & Data Model
-- [docs/DEMO_SCRIPT.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/DEMO_SCRIPT.md) — Judge Demo Script (NovaPhone Campaign Scenario)
-- [docs/SMOKE_TEST.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/SMOKE_TEST.md) — 13-Step Smoke Test Suite
-- [docs/KNOWN_LIMITATIONS.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/KNOWN_LIMITATIONS.md) — Technical Scope & Limitations
-- [docs/REPOSITORY_AUDIT.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/REPOSITORY_AUDIT.md) — Complete Codebase Audit
+- [docs/EXECUTION_GUIDE.md](docs/EXECUTION_GUIDE.md) — Comprehensive Execution & Deployment Guide
+- [docs/FINAL_AUDIT_REPORT.md](docs/FINAL_AUDIT_REPORT.md) — Final Forensic Audit & Verification Report
+- [docs/HACKATHON_REQUIREMENTS.md](docs/HACKATHON_REQUIREMENTS.md) — Hackathon Requirement Compliance Matrix
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — System Architecture & Component Flowcharts
+- [docs/API.md](docs/API.md) — REST API Documentation
+- [docs/DATA_MODEL.md](docs/DATA_MODEL.md) — MongoDB Schemas & Data Model
+- [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) — Judge Demo Script (NovaPhone Campaign Scenario)
+- [docs/SMOKE_TEST.md](docs/SMOKE_TEST.md) — 13-Step Smoke Test Suite
+- [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) — Technical Scope & Limitations
+- [docs/REPOSITORY_AUDIT.md](docs/REPOSITORY_AUDIT.md) — Complete Codebase Audit
 
 ---
 

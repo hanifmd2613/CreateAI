@@ -117,13 +117,13 @@ export const ChatModal: React.FC<ChatModalProps> = ({
 
       const lower = textToSend.toLowerCase();
       if (lower.includes('rate') || lower.includes('budget') || lower.includes('cost') || lower.includes('price')) {
-        replyText = `My typical commercial project rate is around ₹${activeCreator.hourlyRate.toLocaleString('en-IN')}/hr or packaged on milestone deliverables. All payments are secured via CreateAI Indian Rupee escrow with full commercial buyout guarantee!`;
+        replyText = `My typical commercial project rate is around ₹${activeCreator.hourlyRate.toLocaleString('en-IN')}/hr or packaged on milestone deliverables. All payments are secured via GenCraft Indian Rupee escrow with full commercial buyout guarantee!`;
       } else if (lower.includes('turnaround') || lower.includes('time') || lower.includes('deadline') || lower.includes('rush')) {
         replyText = `I can deliver the initial motion passes in ${activeCreator.avgTurnaround}. For urgent brand requirements, we can expedite through our priority neural rendering pipeline.`;
       } else if (lower.includes('veo') || lower.includes('kling') || lower.includes('sora') || lower.includes('flux')) {
         replyText = `Yes! I work extensively with ${activeCreator.tools.join(', ')}. I calibrate seed consistency across character keyframes and camera motion so your brand visual identity remains razor-sharp.`;
       } else if (lower.includes('brief') || lower.includes('campaign') || lower.includes('project')) {
-        replyText = `Feel free to send over the structured brief directly through the CreateAI Brief Builder! Once received, I'll review the keyframe requirements and issue an instant production quote.`;
+        replyText = `Feel free to send over the structured brief directly through the GenCraft Brief Builder! Once received, I'll review the keyframe requirements and issue an instant production quote.`;
       }
 
       const creatorReply: ChatMessage = {
@@ -147,7 +147,7 @@ export const ChatModal: React.FC<ChatModalProps> = ({
   const QUICK_PROMPTS = [
     `Are you available for a 48-hour commercial campaign?`,
     `What are your delivery formats for ${activeCreator.tools[0] || 'Veo'}?`,
-    `Can we discuss commercial buyout under CreateAI escrow?`,
+    `Can we discuss commercial buyout under GenCraft escrow?`,
     `Could you review our campaign reference images?`
   ];
 

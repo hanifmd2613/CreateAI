@@ -75,11 +75,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-2.5 focus:outline-none group"
             >
               <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-zinc-950 font-black text-sm tracking-tighter">
-                CA
+                GC
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className="font-bold text-lg tracking-tight text-white group-hover:text-zinc-200 transition-colors">
-                  CreateAI
+                  GenCraft
                 </span>
                 <span className="text-[10px] font-medium tracking-wide px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
                   PRO
@@ -191,7 +191,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onOpenSystemAssistant}
                 className="p-2 rounded-lg text-emerald-400 hover:text-white hover:bg-zinc-800/60 border border-zinc-800 transition-colors flex items-center justify-center"
-                title="Open CreateAI Gemini System Assistant"
+                title="Open GenCraft Gemini System Assistant"
               >
                 <Camera className="w-3.5 h-3.5" />
               </button>

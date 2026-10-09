@@ -1,15 +1,15 @@
-# CreateAI — Forensic Repository Audit & Resolution Report
+# GenCraft — Forensic Repository Audit & Resolution Report
 
 **Date**: October 8, 2026  
 **Auditor**: Senior Full-Stack, AI & Security Engineer  
 **Target Submission**: AI Content Creator Marketplace Hackathon  
-**Target Repository**: `CreateAI` (`c:\tempp\projects\CreatorMatch-AI`)
+**Target Repository**: `GenCraft` (`GenCraft Repository`)
 
 ---
 
 ## 1. Executive Summary
 
-`CreateAI` is an AI-native content creator marketplace connecting enterprise brands with vetted Generative AI directors and digital artists.
+`GenCraft` is an AI-native content creator marketplace connecting enterprise brands with vetted Generative AI directors and digital artists.
 
 A comprehensive forensic audit of all repository files, configurations, API routes, data structures, UI components, and build artifacts was conducted. The application features a high-fidelity visual layer (obsidian dark mode, custom camera viewfinder cursor, mouse spotlight illumination, and responsive Next.js 14 App Router layout). 
 
@@ -20,7 +20,7 @@ All backend persistence layers, Firebase Client SDK integration, Cloud Firestore
 ## 2. Updated Architecture & Component Inventory
 
 ```
-CreateAI/
+GenCraft/
 ├── src/
 │   ├── app/
 │   │   ├── api/

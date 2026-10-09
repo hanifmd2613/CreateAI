@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       projectTitle: body.projectTitle.trim(),
       proposedBudget: body.proposedBudget || '₹3,50,000',
       status: 'Pending',
-      message: body.message || 'Direct project inquiry submitted via CreateAI Marketplace.',
+      message: body.message || 'Direct project inquiry submitted via GenCraft Marketplace.',
       milestones: body.milestones || [
         { title: 'Initial Style Seeds & Keyframe Approval', amount: '50%', status: 'In Escrow' },
         { title: 'Final 4K Master & Seed Manifest Delivery', amount: '50%', status: 'Pending' }

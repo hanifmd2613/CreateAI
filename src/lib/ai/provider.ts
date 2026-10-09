@@ -11,7 +11,7 @@ export interface GenerateBriefInput {
 
 export interface GenerateBriefResult {
   success: boolean;
-  provider: 'groq' | 'gemini' | 'createai-neural-engine';
+  provider: 'groq' | 'gemini' | 'gencraft-neural-engine' | 'createai-neural-engine';
   brief: {
     title: string;
     contentType: string;
@@ -64,7 +64,7 @@ export async function generateStructuredBrief(input: GenerateBriefInput): Promis
   const fallbackBrief = generateBriefWithFallback(prompt);
   return {
     success: true,
-    provider: 'createai-neural-engine',
+    provider: 'gencraft-neural-engine',
     brief: fallbackBrief,
   };
 }

@@ -1,6 +1,6 @@
 # Architecture Summary
 
-See full architecture documentation at [docs/ARCHITECTURE.md](file:///c:/tempp/projects/CreatorMatch-AI/docs/ARCHITECTURE.md).
+See full architecture documentation at [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Core Data Pipeline
 

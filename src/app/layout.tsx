@@ -3,10 +3,21 @@ import './globals.css';
 import { CameraCursor } from '../components/CameraCursor';
 
 export const metadata: Metadata = {
-  title: 'CreateAI | The Generative AI Content Creator Marketplace',
+  title: 'GenCraft — AI Creator Marketplace & Studio',
   description: 'Connect with specialized Generative AI creators. High-fidelity cinematic commercials, photorealistic product assets, character animation, and verified AI pipelines.',
   icons: {
     icon: '/favicon.ico',
+  },
+  openGraph: {
+    title: 'GenCraft — AI Creator Marketplace & Studio',
+    description: 'Connect with specialized Generative AI creators. High-fidelity cinematic commercials, photorealistic product assets, character animation, and verified AI pipelines.',
+    siteName: 'GenCraft',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'GenCraft — AI Creator Marketplace & Studio',
+    description: 'Connect with specialized Generative AI creators. High-fidelity cinematic commercials, photorealistic product assets, character animation, and verified AI pipelines.',
   },
 };
 

@@ -237,7 +237,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
             <div>
               <h3 className="font-semibold text-white text-base">
-                CreateAI Account & Role
+                GenCraft Account & Role
               </h3>
               <p className="text-xs text-zinc-400">
                 Join or manage your marketplace account
@@ -659,7 +659,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 type="submit"
                 className="w-full py-2.5 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors"
               >
-                Sign In to CreateAI
+                Sign In to GenCraft
               </button>
 
               <div className="pt-3 border-t border-zinc-850 text-center">

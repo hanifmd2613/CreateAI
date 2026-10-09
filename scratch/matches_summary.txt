@@ -1,0 +1,177 @@
+
+=== .env ===
+Line 1: # CreateAI Environment Variables Configuration
+Line 8: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=createai-marketplace.firebaseapp.com
+Line 9: NEXT_PUBLIC_FIREBASE_PROJECT_ID=createai-marketplace
+Line 10: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=createai-marketplace.firebasestorage.app
+Line 20: MONGODB_URI=mongodb://127.0.0.1:27017/createai-marketplace
+Line 23: # MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/createai-marketplace
+
+=== .env.example ===
+Line 1: # CreateAI Environment Variables Configuration
+Line 8: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=createai-marketplace.firebaseapp.com
+Line 9: NEXT_PUBLIC_FIREBASE_PROJECT_ID=createai-marketplace
+Line 10: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=createai-marketplace.appspot.com
+Line 17: # For local development: mongodb://127.0.0.1:27017/createai-marketplace
+Line 18: # For MongoDB Atlas: mongodb+srv://<username>:<password>@cluster.mongodb.net/createai-marketplace
+Line 19: MONGODB_URI=mongodb://127.0.0.1:27017/createai-marketplace
+
+=== LICENSE ===
+Line 3: Copyright (c) 2024-2026 CreateAI Authors (hanifmd2613)
+
+=== package-lock.json ===
+Line 2: "name": "createai-marketplace",
+Line 8: "name": "createai-marketplace",
+
+=== package.json ===
+Line 2: "name": "createai-marketplace",
+
+=== README.md ===
+Line 1: # CreateAI — Generative AI Content Creator Marketplace & Studio
+Line 8: CreateAI is an AI-native content creator marketplace connecting enterprise brands with vetted Generative AI directors and digital artists. Built with **Next.js 14 (App Router)**, **TypeScript**, **Tailwind CSS**, **MongoDB / Mongoose**, **Groq Llama-3.3 70B**, and **Google Gemini 1.5**.
+Line 28: 3. **CreateAI Neural Engine** (Local deterministic fallback)
+Line 58: CreateAI/
+Line 90: - MongoDB instance (local `mongodb://127.0.0.1:27017/createai-marketplace` or MongoDB Atlas URI)
+
+=== docs\API.md ===
+Line 1: # CreateAI — REST API Documentation
+
+=== docs\DATA_MODEL.md ===
+Line 1: # CreateAI — Data Model Specification
+
+=== docs\DEMO_SCRIPT.md ===
+Line 1: # CreateAI — Hackathon Demo Script & Judge Guide
+Line 5: **Goal**: Demonstrate how an enterprise brand uses `CreateAI` to turn a raw concept into a structured campaign brief, rank Gen-AI directors via an explainable matching engine, inspect verified portfolio workflows, and hire a director in under 2 minutes.
+Line 21: - Notice the provider indicator badge (`⚡ Synthesized via Groq Llama-3.3-70B`, `Google Gemini 1.5 Flash`, or `CreateAI Neural Engine`).
+
+=== docs\EXECUTION_GUIDE.md ===
+Line 1: # CreateAI — Hackathon Execution & Deployment Guide
+Line 3: This guide provides end-to-end instructions for installing, configuring, seeding, running, testing, and demonstrating the **CreateAI** platform for the **AI Content Creator Marketplace Hackathon**.
+Line 41: 2. Click **"Add Project"** and name it `createai-marketplace`.
+Line 57: - Go to [Firebase Console](https://console.firebase.google.com/) → Open project `createai-marketplace`.
+Line 63: - Go to [Firebase Console](https://console.firebase.google.com/) → Open project `createai-marketplace`.
+Line 97: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=createai-marketplace.firebaseapp.com
+Line 98: NEXT_PUBLIC_FIREBASE_PROJECT_ID=createai-marketplace
+Line 99: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=createai-marketplace.appspot.com
+Line 106: # For local development: mongodb://127.0.0.1:27017/createai-marketplace
+Line 107: # For MongoDB Atlas: mongodb+srv://<username>:<password>@cluster.mongodb.net/createai-marketplace
+Line 108: MONGODB_URI=mongodb://127.0.0.1:27017/createai-marketplace
+Line 135: cd CreateAI
+Line 241: - Notice the provider badge (`⚡ Synthesized via Groq Llama-3.3-70B`, `Google Gemini 1.5`, or `CreateAI Neural Engine`).
+Line 306: | AI Brief Builder shows `CreateAI Neural Engine` | `GROQ_API_KEY` and `GOOGLE_GEMINI_API_KEY` are unset | Optional: add valid API keys in `.env.local` or client **API Config Modal**. Fallback engine works out-of-the-box. |
+
+=== docs\FINAL_AUDIT_REPORT.md ===
+Line 1: # CreateAI — Final Hackathon Audit & Execution Report
+Line 6: **Target Repository**: `CreateAI` (`c:\tempp\projects\CreatorMatch-AI`)
+Line 22: | **AI Brief Builder** | **PASS** | Multi-engine AI provider abstraction (`src/lib/ai/`) supporting Groq Llama-3.3, Google Gemini 1.5, and CreateAI Neural Fallback. |
+
+=== docs\HACKATHON_REQUIREMENTS.md ===
+Line 3: **Project**: CreateAI — Generative AI Content Creator Marketplace
+Line 15: | **4. AI-Assisted Brief Builder** | Converts raw creative concepts into structured production parameters using multi-engine AI inference with fallback. | **PASSED** | `/api/ai/generate-brief` with modular provider abstraction (`Groq Llama-3.3` -> `Google Gemini 1.5` -> `CreateAI Local Synthesizer`). Frontend clearly indicates provider origin. |
+
+=== docs\KNOWN_LIMITATIONS.md ===
+Line 1: # CreateAI — Known Limitations & Scope Boundaries
+Line 5: `CreateAI` was built during the 16-hour AI Content Creator Marketplace Hackathon. To ensure maximum stability and reliability during live evaluation, specific complex enterprise features are simplified with graceful fallbacks:
+
+=== docs\REPOSITORY_AUDIT.md ===
+Line 1: # CreateAI — Forensic Repository Audit & Resolution Report
+Line 6: **Target Repository**: `CreateAI` (`c:\tempp\projects\CreatorMatch-AI`)
+Line 12: `CreateAI` is an AI-native content creator marketplace connecting enterprise brands with vetted Generative AI directors and digital artists.
+Line 23: CreateAI/
+
+=== docs\SMOKE_TEST.md ===
+Line 1: # CreateAI — Hackathon Smoke Test Suite
+
+=== src\app\layout.tsx ===
+Line 6: title: 'CreateAI | The Generative AI Content Creator Marketplace',
+
+=== src\app\page.tsx ===
+Line 139: const storedAuth = localStorage.getItem('createai_is_authenticated');
+Line 140: const storedUser = localStorage.getItem('createai_current_user');
+Line 141: const storedGroq = localStorage.getItem('createai_groq_key');
+Line 142: const storedGemini = localStorage.getItem('createai_gemini_key');
+Line 143: const storedTheme = localStorage.getItem('createai_theme') as 'dark' | 'light' | null;
+Line 199: localStorage.setItem('createai_theme', nextTheme);
+Line 217: localStorage.setItem('createai_groq_key', newGroq);
+Line 218: localStorage.setItem('createai_gemini_key', newGemini);
+Line 228: localStorage.setItem('createai_is_authenticated', 'true');
+Line 229: localStorage.setItem('createai_current_user', JSON.stringify(user));
+Line 246: localStorage.removeItem('createai_is_authenticated');
+Line 247: localStorage.removeItem('createai_current_user');
+Line 249: showToast('Signed out of CreateAI.');
+Line 260: localStorage.setItem('createai_current_user', JSON.stringify(updated));
+Line 454: setVoiceBanner(`🎙️ AI Voice Bot: "Hello ${candidateName}, and welcome to CreateAI."`);
+Line 1067: <span className="font-semibold text-zinc-200 text-xs">CreateAI</span>
+Line 1077: <span className="text-zinc-600">© 2025 CreateAI</span>
+
+=== src\app\api\ai\assistant\route.ts ===
+Line 18: const systemPrompt = `You are the official CreateAI System Assistant powered by Google Gemini.
+Line 19: CreateAI is an enterprise marketplace connecting brands with specialized Generative AI creators in India and globally.
+Line 20: Features of CreateAI:
+Line 63: // 2. Intelligent Built-in Gemini Knowledge Engine for CreateAI
+Line 67: reply = `**Welcome to CreateAI! Here is how to navigate and use the platform:**
+Line 91: 4. Funds are placed into **CreateAI Escrow (in ₹)** and released only after you review and approve the final master assets.`;
+Line 93: reply = `**Supported Production AI Tools on CreateAI:**
+Line 115: reply = `**CreateAI Gemini System Assistant:**
+Line 117: I can assist you with everything on CreateAI:
+Line 128: provider: 'createai-gemini-engine',
+
+=== src\app\api\engagements\route.ts ===
+Line 58: message: body.message || 'Direct project inquiry submitted via CreateAI Marketplace.',
+
+=== src\components\ApiConfigModal.tsx ===
+Line 135: If no API key is specified, CreateAI utilizes its built-in engine with structured enterprise output.
+
+=== src\components\AuthGate.tsx ===
+Line 102: // 1. Play natural fluent AI Voice Greeting: "Hello [name], and welcome to CreateAI."
+Line 169: client: 'CreateAI Showcase'
+Line 204: email: 'public@createai.open',
+Line 241: <span>CreateAI Access Gate</span>
+Line 247: Welcome to CreateAI
+Line 635: On verification, our English AI voice agent will greet: <strong className="text-zinc-200">"Hello {name.split(' ')[0] || 'Candidate'}, and welcome to CreateAI."</strong>
+Line 653: <span>Verify Email & Enter CreateAI</span>
+
+=== src\components\AuthModal.tsx ===
+Line 240: CreateAI Account & Role
+Line 662: Sign In to CreateAI
+
+=== src\components\BriefBuilder.tsx ===
+Line 67: const [activeProviderName, setActiveProviderName] = useState<string>('CreateAI Neural Engine');
+Line 235: : 'CreateAI Neural Engine';
+Line 244: applyBriefData(fallbackBrief, 'CreateAI Neural Synthesis Engine');
+Line 249: applyBriefData(fallbackBrief, 'CreateAI Neural Synthesis Engine');
+
+=== src\components\ChatModal.tsx ===
+Line 120: replyText = `My typical commercial project rate is around ₹${activeCreator.hourlyRate.toLocaleString('en-IN')}/hr or packaged on milestone deliverables. All payments are secured via CreateAI Indian Rupee escrow with full commercial buyout guarantee!`;
+Line 126: replyText = `Feel free to send over the structured brief directly through the CreateAI Brief Builder! Once received, I'll review the keyframe requirements and issue an instant production quote.`;
+Line 150: `Can we discuss commercial buyout under CreateAI escrow?`,
+
+=== src\components\Navbar.tsx ===
+Line 82: CreateAI
+Line 194: title="Open CreateAI Gemini System Assistant"
+
+=== src\components\SystemAssistantModal.tsx ===
+Line 52: text: `**Hello! I am your CreateAI System Assistant powered by Google Gemini.**\n\nI can answer questions on how to use CreateAI, commission creators, build automated briefs, understand our Indian Rupee (₹) escrow, or compare Gen-AI models (*Veo, Kling, Sora, Flux.1, ElevenLabs, Pika*).\n\nHow can I help you today?`,
+Line 110: text: `**CreateAI Guidance:**\n\nTo discover specialized creators, use the top search bar to filter by field or tools (Veo, Kling, Sora, Flux.1, ElevenLabs, Pika). You can directly chat with creator employees using the **Chat** button, or head to **Post a Brief** and use the **AI Assist** button to auto-structure your campaign brief with milestone escrow in Indian Rupees (₹).`,
+Line 120: text: `**CreateAI System Helper:**\n\nYou can explore vetted Gen-AI creators on the Discover page, post a campaign in the Brief Builder with one-click AI generation, and chat directly with creators. All payments are secured in Indian Rupees (₹) with commercial buyout rights.`,
+Line 153: <span className="text-[10px] text-zinc-400">Click to learn how to use CreateAI</span>
+Line 177: <h2 className="text-sm font-semibold text-white">CreateAI System Assistant</h2>
+Line 271: placeholder="Ask Gemini anything about using CreateAI..."
+
+=== src\components\VerificationPanel.tsx ===
+Line 18: desc: 'Account identity & production standards certified by CreateAI Audit team.',
+
+=== src\lib\firebase.ts ===
+Line 9: authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'createai-marketplace.firebaseapp.com',
+Line 10: projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'createai-marketplace',
+Line 11: storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'createai-marketplace.appspot.com',
+
+=== src\lib\mongodb.ts ===
+Line 3: const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/createai-marketplace';
+
+=== src\lib\ai\provider.ts ===
+Line 14: provider: 'groq' | 'gemini' | 'createai-neural-engine';
+Line 67: provider: 'createai-neural-engine',
+
+=== src\utils\speech.ts ===
+Line 17: const greetingText = `Hello ${cleanName}, and welcome to CreateAI.`;

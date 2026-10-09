@@ -1,8 +1,8 @@
-# CreateAI — Known Limitations & Scope Boundaries
+# GenCraft — Known Limitations & Scope Boundaries
 
 ## 1. Hackathon Scope Clarifications
 
-`CreateAI` was built during the 16-hour AI Content Creator Marketplace Hackathon. To ensure maximum stability and reliability during live evaluation, specific complex enterprise features are simplified with graceful fallbacks:
+`GenCraft` was built during the 16-hour AI Content Creator Marketplace Hackathon. To ensure maximum stability and reliability during live evaluation, specific complex enterprise features are simplified with graceful fallbacks:
 
 ---
 

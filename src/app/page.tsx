@@ -136,11 +136,11 @@ export default function Home() {
   // Restore session, API keys, theme from localStorage
   useEffect(() => {
     try {
-      const storedAuth = localStorage.getItem('createai_is_authenticated');
-      const storedUser = localStorage.getItem('createai_current_user');
-      const storedGroq = localStorage.getItem('createai_groq_key');
-      const storedGemini = localStorage.getItem('createai_gemini_key');
-      const storedTheme = localStorage.getItem('createai_theme') as 'dark' | 'light' | null;
+      const storedAuth = localStorage.getItem('gencraft_is_authenticated') || localStorage.getItem('createai_is_authenticated');
+      const storedUser = localStorage.getItem('gencraft_current_user') || localStorage.getItem('createai_current_user');
+      const storedGroq = localStorage.getItem('gencraft_groq_key') || localStorage.getItem('createai_groq_key');
+      const storedGemini = localStorage.getItem('gencraft_gemini_key') || localStorage.getItem('createai_gemini_key');
+      const storedTheme = (localStorage.getItem('gencraft_theme') || localStorage.getItem('createai_theme')) as 'dark' | 'light' | null;
 
       if (storedGroq) setGroqKey(storedGroq);
       if (storedGemini) setGeminiKey(storedGemini);
@@ -196,7 +196,7 @@ export default function Home() {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     try {
-      localStorage.setItem('createai_theme', nextTheme);
+      localStorage.setItem('gencraft_theme', nextTheme);
     } catch (e) {}
 
     if (nextTheme === 'light') {
@@ -214,8 +214,8 @@ export default function Home() {
     setGroqKey(newGroq);
     setGeminiKey(newGemini);
     try {
-      localStorage.setItem('createai_groq_key', newGroq);
-      localStorage.setItem('createai_gemini_key', newGemini);
+      localStorage.setItem('gencraft_groq_key', newGroq);
+      localStorage.setItem('gencraft_gemini_key', newGemini);
     } catch (e) {}
     showToast('AI inference API keys saved successfully!');
   };
@@ -225,8 +225,8 @@ export default function Home() {
     setCurrentUser(user);
     setIsAuthenticated(true);
     try {
-      localStorage.setItem('createai_is_authenticated', 'true');
-      localStorage.setItem('createai_current_user', JSON.stringify(user));
+      localStorage.setItem('gencraft_is_authenticated', 'true');
+      localStorage.setItem('gencraft_current_user', JSON.stringify(user));
     } catch (e) {}
 
     if (newCreator) {
@@ -243,10 +243,12 @@ export default function Home() {
     setIsAuthenticated(false);
     setCurrentUser(null);
     try {
+      localStorage.removeItem('gencraft_is_authenticated');
+      localStorage.removeItem('gencraft_current_user');
       localStorage.removeItem('createai_is_authenticated');
       localStorage.removeItem('createai_current_user');
     } catch (e) {}
-    showToast('Signed out of CreateAI.');
+    showToast('Signed out of GenCraft.');
   };
 
   const handleSwitchRole = (newRole: UserRole) => {
@@ -257,7 +259,7 @@ export default function Home() {
     };
     setCurrentUser(updated);
     try {
-      localStorage.setItem('createai_current_user', JSON.stringify(updated));
+      localStorage.setItem('gencraft_current_user', JSON.stringify(updated));
     } catch (e) {}
     showToast(`Switched active view to ${newRole.toUpperCase()} mode.`);
   };
@@ -451,7 +453,7 @@ export default function Home() {
           handleLoginSuccess(user, newCreator);
         }}
         onVoiceSpoken={(candidateName) => {
-          setVoiceBanner(`🎙️ AI Voice Bot: "Hello ${candidateName}, and welcome to CreateAI."`);
+          setVoiceBanner(`🎙️ AI Voice Bot: "Hello ${candidateName}, and welcome to GenCraft."`);
           setTimeout(() => setVoiceBanner(null), 6500);
         }}
       />
@@ -1062,9 +1064,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <div className="w-5 h-5 rounded bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center justify-center font-bold text-[10px]">
-              CA
+              GC
             </div>
-            <span className="font-semibold text-zinc-200 text-xs">CreateAI</span>
+            <span className="font-semibold text-zinc-200 text-xs">GenCraft</span>
             <span className="text-zinc-700">•</span>
             <span>Enterprise Generative AI Creator Platform</span>
           </div>
@@ -1074,7 +1076,7 @@ export default function Home() {
             <button onClick={() => setCurrentView('briefs-feed')} className="hover:text-white transition-colors">Campaign Briefs</button>
             <button onClick={() => handleOpenChat()} className="hover:text-white transition-colors">Direct Messages</button>
             <button onClick={() => setSystemAssistantOpen(true)} className="hover:text-emerald-400 transition-colors">AI Assistant</button>
-            <span className="text-zinc-600">© 2025 CreateAI</span>
+            <span className="text-zinc-600">© 2025 GenCraft</span>
           </div>
         </div>
       </footer>

@@ -1,6 +1,6 @@
-# CreateAI — Hackathon Execution & Deployment Guide
+# GenCraft — Hackathon Execution & Deployment Guide
 
-This guide provides end-to-end instructions for installing, configuring, seeding, running, testing, and demonstrating the **CreateAI** platform for the **AI Content Creator Marketplace Hackathon**.
+This guide provides end-to-end instructions for installing, configuring, seeding, running, testing, and demonstrating the **GenCraft** platform for the **AI Content Creator Marketplace Hackathon**.
 
 ---
 
@@ -38,7 +38,7 @@ Ensure your environment meets the following specifications:
 
 ### Step 1: Create a Firebase Project
 1. Go to the [Firebase Console](https://console.firebase.google.com/).
-2. Click **"Add Project"** and name it `createai-marketplace`.
+2. Click **"Add Project"** and name it `gencraft-marketplace`.
 3. Disable Google Analytics (optional for hackathon MVP) and click **Create Project**.
 
 ### Step 2: Enable Firebase Services (100% Free Spark Plan - No Credit Card Required)
@@ -49,20 +49,20 @@ Ensure your environment meets the following specifications:
    - Media URLs (images, videos, thumbnails, audio showcases) are stored as direct HTTPS CDN URLs (e.g. Unsplash, Imgur, Cloudinary Free Tier, or DiceBear) directly inside Firestore document fields (`mediaUrl`, `thumbnail`, `avatar`).
 
 ### Step 3: Deploy Security Rules
-The repository includes production security rules in [`firestore.rules`](file:///c:/tempp/projects/CreatorMatch-AI/firestore.rules) and [`storage.rules`](file:///c:/tempp/projects/CreatorMatch-AI/storage.rules). You can deploy them using **Option A (Web Console - Fastest)** or **Option B (Firebase CLI)**:
+The repository includes production security rules in [`firestore.rules`](firestore.rules) and [`storage.rules`](storage.rules). You can deploy them using **Option A (Web Console - Fastest)** or **Option B (Firebase CLI)**:
 
 #### Option A: Deploy via Firebase Web Console (Recommended for Quick Demo Setup)
 1. **Firestore Database Rules**:
-   - Copy all contents from [`firestore.rules`](file:///c:/tempp/projects/CreatorMatch-AI/firestore.rules).
-   - Go to [Firebase Console](https://console.firebase.google.com/) → Open project `createai-marketplace`.
+   - Copy all contents from [`firestore.rules`](firestore.rules).
+   - Go to [Firebase Console](https://console.firebase.google.com/) → Open project `gencraft-marketplace`.
    - Click **Firestore Database** in sidebar → Click **Rules** tab.
-   - Replace the default text with the contents of [`firestore.rules`](file:///c:/tempp/projects/CreatorMatch-AI/firestore.rules) → Click **Publish**.
+   - Replace the default text with the contents of [`firestore.rules`](firestore.rules) → Click **Publish**.
 
 2. **Storage Rules (Optional - Only if Firebase Storage is enabled)**:
-   - Copy all contents from [`storage.rules`](file:///c:/tempp/projects/CreatorMatch-AI/storage.rules).
-   - Go to [Firebase Console](https://console.firebase.google.com/) → Open project `createai-marketplace`.
+   - Copy all contents from [`storage.rules`](storage.rules).
+   - Go to [Firebase Console](https://console.firebase.google.com/) → Open project `gencraft-marketplace`.
    - Click **Storage** in sidebar → Click **Rules** tab.
-   - Replace default text with the contents of [`storage.rules`](file:///c:/tempp/projects/CreatorMatch-AI/storage.rules) → Click **Publish**.
+   - Replace default text with the contents of [`storage.rules`](storage.rules) → Click **Publish**.
 
 #### Option B: Deploy via Firebase CLI (Automated Deployment)
 ```bash
@@ -94,18 +94,18 @@ cp .env.example .env.local
 # ==============================================================================
 # Firebase Client SDK Credentials (from Firebase Console -> Project Settings -> General)
 NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key_here
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=createai-marketplace.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=createai-marketplace
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=createai-marketplace.appspot.com
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=gencraft-marketplace.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=gencraft-marketplace
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=gencraft-marketplace.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789012
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789012:web:abcdef1234567890
 
 # ==============================================================================
 # DATABASE PERSISTENCE (MONGODB FALLBACK/ALTERNATIVE)
 # ==============================================================================
-# For local development: mongodb://127.0.0.1:27017/createai-marketplace
-# For MongoDB Atlas: mongodb+srv://<username>:<password>@cluster.mongodb.net/createai-marketplace
-MONGODB_URI=mongodb://127.0.0.1:27017/createai-marketplace
+# For local development: mongodb://127.0.0.1:27017/gencraft-marketplace
+# For MongoDB Atlas: mongodb+srv://<username>:<password>@cluster.mongodb.net/gencraft-marketplace
+MONGODB_URI=mongodb://127.0.0.1:27017/gencraft-marketplace
 
 # ==============================================================================
 # MULTI-ENGINE AI PROVIDER KEYS (OPTIONAL)
@@ -132,7 +132,7 @@ Cleanly install all required Node.js dependencies:
 
 ```bash
 # Navigate to repository root
-cd CreateAI
+cd GenCraft
 
 # Clean install dependencies
 npm install
@@ -238,7 +238,7 @@ sequenceDiagram
 1. **Open AI Brief Builder**: Click **"AI Brief Builder"** in the top navigation bar.
 2. **Select NovaPhone Template**: Click the quick prompt chip: *"Futuristic 30-second smartphone launch film..."*
 3. **Synthesize Brief**: Click **"Synthesize Brief with AI"**.
-   - Notice the provider badge (`⚡ Synthesized via Groq Llama-3.3-70B`, `Google Gemini 1.5`, or `CreateAI Neural Engine`).
+   - Notice the provider badge (`⚡ Synthesized via Groq Llama-3.3-70B`, `Google Gemini 1.5`, or `GenCraft Neural Engine`).
    - Review populated attributes: `AI Commercial Video`, `Cinematic Hyperrealism`, `9:16` format, `₹6,50,000` budget, `3 Days` deadline, and tools (`Veo`, `Kling`, `ElevenLabs`).
 4. **Save Brief**: Click **"Save Brief to Marketplace"**.
 5. **Execute Matching**: Click **"Find Matching Creators"** → **"Ranked AI Matches"**.
@@ -303,5 +303,5 @@ curl -X POST http://localhost:3000/api/briefs \
 | `Firebase SDK warning` in console | Firebase keys unset in `.env.local` | Firebase features fall back gracefully to local objects. To connect Firebase, add `NEXT_PUBLIC_FIREBASE_*` variables in `.env.local`. |
 | `MongoDB connection warning` in logs | Local MongoDB service is not running | Run `mongod` or check `MONGODB_URI` in `.env.local`. The app will fallback gracefully to in-memory runtime objects. |
 | `port 3000 is already in use` | Another process is using port 3000 | Kill process on 3000 (`npx kill-port 3000`) or run `npm run dev -- -p 3001`. |
-| AI Brief Builder shows `CreateAI Neural Engine` | `GROQ_API_KEY` and `GOOGLE_GEMINI_API_KEY` are unset | Optional: add valid API keys in `.env.local` or client **API Config Modal**. Fallback engine works out-of-the-box. |
+| AI Brief Builder shows `GenCraft Neural Engine` | `GROQ_API_KEY` and `GOOGLE_GEMINI_API_KEY` are unset | Optional: add valid API keys in `.env.local` or client **API Config Modal**. Fallback engine works out-of-the-box. |
 | TypeScript errors during build | Mismatched interface definitions | Run `npx tsc --noEmit` to verify type safety. |
