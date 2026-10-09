@@ -231,7 +231,17 @@ export default function Home() {
     } catch (e) {}
 
     if (newCreator) {
-      setCreators(prev => [newCreator, ...prev]);
+      setCreators(prev => {
+        const cleanId = newCreator.id;
+        const cleanName = newCreator.name.trim().toLowerCase();
+        const cleanHandle = newCreator.handle ? newCreator.handle.trim().toLowerCase() : '';
+        const filtered = prev.filter(c => 
+          c.id !== cleanId && 
+          c.name.trim().toLowerCase() !== cleanName && 
+          (cleanHandle === '' || (c.handle && c.handle.trim().toLowerCase() !== cleanHandle))
+        );
+        return [newCreator, ...filtered];
+      });
       setSelectedCreator(newCreator);
       setCurrentView('profile');
       showToast(`Welcome ${user.name}! Your Creator Studio profile is live in the marketplace.`);
@@ -276,7 +286,12 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json();
         if (data.creators && Array.isArray(data.creators)) {
-          setCreators(prev => [...data.creators, ...prev]);
+          setCreators(prev => {
+            const existingIds = new Set(prev.map(c => c.id));
+            const existingNames = new Set(prev.map(c => c.name.trim().toLowerCase()));
+            const newOnly = data.creators.filter((c: Creator) => !existingIds.has(c.id) && !existingNames.has(c.name.trim().toLowerCase()));
+            return [...newOnly, ...prev];
+          });
           showToast(`⚡ Successfully synced ${data.creators.length} real creators into the marketplace!`);
         }
       }
@@ -348,13 +363,24 @@ export default function Home() {
     showToast(`Filtered creators specialized in ${tools.join(', ')}.`);
   };
 
+  // Guaranteed Unique Creators List (Deduplicated by ID / Name / Handle)
+  const uniqueCreators = useMemo(() => {
+    const seen = new Set<string>();
+    return creators.filter((c) => {
+      const key = (c.id || c.handle || c.name).trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [creators]);
+
   // Live matching creators in Search Bar Dropdown
   const searchDropdownCreators = useMemo(() => {
     if (!searchQuery.trim()) {
-      return creators.slice(0, 5);
+      return uniqueCreators.slice(0, 5);
     }
     const q = searchQuery.toLowerCase().trim();
-    return creators.filter(c => 
+    return uniqueCreators.filter(c => 
       c.name.toLowerCase().includes(q) ||
       c.specialization.toLowerCase().includes(q) ||
       c.skills.some(s => s.toLowerCase().includes(q)) ||
@@ -363,11 +389,11 @@ export default function Home() {
       c.bio.toLowerCase().includes(q) ||
       c.portfolio.some(p => p.title.toLowerCase().includes(q) || (p.specificModel && p.specificModel.toLowerCase().includes(q)) || (p.model && p.model.toLowerCase().includes(q)))
     );
-  }, [creators, searchQuery]);
+  }, [uniqueCreators, searchQuery]);
 
   // Filtered and Sorted Creators List for the Grid
   const filteredCreators = useMemo(() => {
-    return creators
+    return uniqueCreators
       .filter((creator) => {
         // Search query filter
         if (searchQuery.trim() !== '') {
@@ -532,10 +558,10 @@ export default function Home() {
             </FadeInSection>
 
             {/* Search & Filter Command Bar with Live In-Search Dropdown */}
-            <FadeInSection delayMs={100} className="bg-zinc-900/60 backdrop-blur-md rounded-2xl border border-zinc-800 p-5 mb-8 space-y-4 shadow-sm relative">
+            <FadeInSection delayMs={100} className="bg-zinc-900/60 backdrop-blur-md rounded-2xl border border-zinc-800 p-5 mb-8 space-y-4 shadow-sm relative z-30">
               
               {/* Primary Search Input with Interactive Dropdown Container */}
-              <div ref={searchContainerRef} className="relative">
+              <div ref={searchContainerRef} className="relative z-50">
                 <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3.5 z-10" />
                 <input
                   type="text"
@@ -610,7 +636,7 @@ export default function Home() {
                 {/* Live Suggestions Dropdown (100% Solid Opaque Background, Closes on Enter/Click/Esc) */}
                 {isSearchFocused && (
                   <div 
-                    className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-[#09090b] border border-zinc-700 shadow-2xl p-4 z-[999] space-y-3 ring-1 ring-white/10"
+                    className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-[#09090b] border border-zinc-700 shadow-2xl p-4 z-[9999] space-y-3 ring-1 ring-white/10"
                     onMouseDown={(e) => e.preventDefault()}
                   >
                     {/* Header */}
