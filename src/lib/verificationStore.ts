@@ -110,7 +110,7 @@ export function verifyOtpCode(
 
   // Atomic consumption of challenge upon successful verification
   challenge.verifiedAt = Date.now();
-  const verificationToken = crypto.randomBytes(24).toString('hex');
+  const verifiedToken = crypto.randomBytes(24).toString('hex');
   challengeMap.delete(normEmail);
 
   return {

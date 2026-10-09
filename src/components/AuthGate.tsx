@@ -4,6 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { UserAccount, UserRole, Creator } from '../types';
 import { playAiVoiceGreeting } from '../utils/speech';
 import { 
+  signInWithGoogle, 
+  signUpWithEmail, 
+  signInWithEmail, 
+  sendPasswordReset, 
+  saveUserProfileToFirestore,
+  fetchUserProfile 
+} from '../lib/auth';
+import { 
   Sparkles, 
   Mail, 
   ShieldCheck, 
@@ -16,10 +24,10 @@ import {
   Volume2, 
   Briefcase, 
   MapPin, 
-  Wand2,
   Lock,
-  Radio,
-  Globe
+  Eye,
+  EyeOff,
+  AlertCircle
 } from 'lucide-react';
 
 interface AuthGateProps {
@@ -28,12 +36,17 @@ interface AuthGateProps {
 }
 
 export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken }) => {
-  const [mode, setMode] = useState<'signin' | 'register'>('register');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'reset'>('signup');
   const [role, setRole] = useState<UserRole>('creator');
   
   // Form fields
   const [name, setName] = useState('Arjun Nambiar');
   const [email, setEmail] = useState('arjun.ai@creators.in');
+  const [password, setPassword] = useState('GenCraft@2026');
+  const [confirmPassword, setConfirmPassword] = useState('GenCraft@2026');
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Role-specific fields
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [companyName, setCompanyName] = useState('Kaveri Media Group');
   const [specialization, setSpecialization] = useState('AI Filmmaker & Commercial Director');
@@ -42,12 +55,12 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
   
   // OTP flow state
   const [otpStep, setOtpStep] = useState<'input-details' | 'verify-otp'>('input-details');
-  const [generatedOtp, setGeneratedOtp] = useState<string>('');
   const [enteredOtp, setEnteredOtp] = useState<string>('');
-  const [otpSentNotice, setOtpSentNotice] = useState<string | null>(null);
+  const [otpNotice, setOtpNotice] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [otpError, setOtpError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [resetSuccessMsg, setResetSuccessMsg] = useState<string | null>(null);
 
   // Dynamic Avatar preview based on Gender and Name
   const avatarUrl = gender === 'male'
@@ -63,55 +76,152 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  // Generate 6-digit OTP and transition to OTP verification step
-  const handleSendOtp = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!email || !email.includes('@')) {
-      alert('Please enter a valid email address.');
-      return;
-    }
-    if (!name.trim()) {
-      alert('Please enter your full candidate name.');
-      return;
-    }
-
-    // Generate random 6-digit OTP
-    const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setGeneratedOtp(randomOtp);
-    setEnteredOtp('');
-    setOtpError(null);
-    setOtpStep('verify-otp');
-    setResendCooldown(30);
-
-    setOtpSentNotice(`Verification OTP dispatched to ${email}: ${randomOtp}`);
-  };
-
-  // Verify OTP and complete authentication
-  const handleVerifyOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setOtpError(null);
-
-    if (enteredOtp.trim() !== generatedOtp.trim()) {
-      setOtpError('Invalid OTP. Please check the 6-digit code sent to your email.');
-      return;
-    }
-
-    setIsVerifying(true);
+  // Handle Google Sign-In
+  const handleGoogleAuth = async () => {
+    setErrorMsg(null);
+    setIsLoading(true);
 
     try {
-      // 1. Play natural fluent AI Voice Greeting: "Hello [name], and welcome to GenCraft."
-      const cleanFirstName = name.trim().split(' ')[0] || 'Candidate';
-      if (onVoiceSpoken) {
-        onVoiceSpoken(cleanFirstName);
+      const { user: fbUser, error } = await signInWithGoogle();
+      if (error || !fbUser) {
+        setErrorMsg(error || 'Google sign-in failed.');
+        setIsLoading(false);
+        return;
       }
-      playAiVoiceGreeting(cleanFirstName);
 
-      // 2. Build User Account Object
-      const userId = `user-${Date.now()}`;
+      // Check if user profile already exists in Firestore
+      const existingProfile = await fetchUserProfile(fbUser.uid);
+      if (existingProfile) {
+        playAiVoiceGreeting(existingProfile.name.split(' ')[0] || 'User');
+        onAuthSuccess(existingProfile);
+        return;
+      }
+
+      // If new Google user, construct profile from Google metadata
+      const newAccount: UserAccount = {
+        id: fbUser.uid,
+        name: fbUser.displayName || name || 'Google User',
+        email: fbUser.email || email,
+        role: role,
+        avatar: fbUser.photoURL || avatarUrl,
+        handle: `@${(fbUser.displayName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+        companyName: role === 'brand' ? companyName : undefined,
+        specialization: role === 'creator' ? specialization : undefined,
+        tools: role === 'creator' ? selectedTools : undefined,
+        location: location,
+        isVerified: true,
+      };
+
+      let newCreator: Creator | undefined;
+      if (role === 'creator') {
+        newCreator = buildCreatorObject(newAccount);
+      }
+
+      await saveUserProfileToFirestore(newAccount, newCreator);
+      playAiVoiceGreeting(newAccount.name.split(' ')[0] || 'User');
+      onAuthSuccess(newAccount, newCreator);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Google Authentication error.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Dispatch real server-side OTP code
+  const handleSendVerificationCode = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setErrorMsg(null);
+    setResetSuccessMsg(null);
+
+    if (!email || !email.includes('@')) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+
+    if (authMode === 'signup') {
+      if (!name.trim()) {
+        setErrorMsg('Please enter your full candidate name.');
+        return;
+      }
+      if (password.length < 6) {
+        setErrorMsg('Password must be at least 6 characters long.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMsg('Passwords do not match. Please check confirmation.');
+        return;
+      }
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/send-verification-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, purpose: 'signup' }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setErrorMsg(data.error || 'Failed to send verification code.');
+        setIsLoading(false);
+        return;
+      }
+
+      setEnteredOtp('');
+      setOtpStep('verify-otp');
+      setResendCooldown(60);
+
+      if (data.devCode) {
+        setOtpNotice(`Code sent to ${email} (Demo code: ${data.devCode})`);
+      } else {
+        setOtpNotice(`Verification code dispatched to ${email}. Check your inbox.`);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to dispatch verification code.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Verify OTP & complete signup
+  const handleVerifyCodeAndSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setErrorMsg(null);
+
+    if (!enteredOtp || enteredOtp.trim().length !== 6) {
+      setErrorMsg('Please enter the complete 6-digit verification code.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // 1. Verify code on server
+      const verifyRes = await fetch('/api/auth/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code: enteredOtp.trim() }),
+      });
+
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok || verifyData.error) {
+        setErrorMsg(verifyData.error || 'Invalid verification code.');
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Create Firebase Auth user
+      const { user: fbUser, error: signupError } = await signUpWithEmail(email, password);
+      const uid = fbUser ? fbUser.uid : `user-${Date.now()}`;
+
+      // 3. Build & Save Authoritative Profile
+      const cleanFirstName = name.trim().split(' ')[0] || 'Candidate';
       const handle = `@${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
 
       const userAccount: UserAccount = {
-        id: userId,
+        id: uid,
         name: name.trim(),
         email: email.trim().toLowerCase(),
         role: role,
@@ -128,62 +238,135 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
         isVerified: true,
       };
 
-      // 3. If registering as a creator, also create creator profile
-      let newCreator: Creator | undefined = undefined;
+      let newCreator: Creator | undefined;
       if (role === 'creator') {
-        newCreator = {
-          id: `creator-${Date.now()}`,
-          name: name.trim(),
-          gender: gender,
-          handle: handle,
-          avatar: avatarUrl,
-          specialization: specialization,
-          bio: `Specializing in ${specialization} with certified pipelines across ${selectedTools.join(', ')}. Open for brand commissions.`,
-          location: location,
-          skills: ['Prompt Engineering', 'Keyframe Generation', 'Motion Interpolation', 'Seed Matching'],
-          tools: selectedTools,
-          isVerified: true,
-          verifiedDetails: {
-            certifiedPipeline: 'Certified Neural Creator Protocol v1.0',
-            auditDate: 'Today',
-            safetyScore: 99.8,
-            commercialRightsGuaranteed: true,
-          },
-          rating: 5.0,
-          reviewCount: 1,
-          completedProjects: 0,
-          hourlyRate: 8500,
-          avgTurnaround: '48 Hours',
-          availableNow: true,
-          portfolio: [
-            {
-              id: `port-${Date.now()}-1`,
-              title: `${specialization} Demo Showcase`,
-              type: 'video',
-              mediaUrl: 'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=1200&q=80',
-              thumbnail: 'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=600&q=80',
-              specificModel: selectedTools.join(' + '),
-              workflowDescription: `Synthesized via ${selectedTools.join(' -> ')} with deterministic seed locking.`,
-              aspectRatio: '16:9',
-              duration: '0:30',
-              client: 'GenCraft Showcase'
-            }
-          ],
-          reviews: []
-        };
+        newCreator = buildCreatorObject(userAccount);
       }
 
-      // Small pause to let user see successful confirmation state
+      await saveUserProfileToFirestore(userAccount, newCreator);
+      if (onVoiceSpoken) onVoiceSpoken(cleanFirstName);
+      playAiVoiceGreeting(cleanFirstName);
+
       setTimeout(() => {
         onAuthSuccess(userAccount, newCreator);
-      }, 700);
+      }, 600);
 
-    } catch (err) {
-      console.error('Error during OTP verification:', err);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error during account verification & creation.');
     } finally {
-      setIsVerifying(false);
+      setIsLoading(false);
     }
   };
+
+  // Traditional Email/Password Login
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+
+    if (!email || !password) {
+      setErrorMsg('Please enter both email and password.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { user: fbUser, error } = await signInWithEmail(email, password);
+      if (error || !fbUser) {
+        setErrorMsg(error || 'Invalid credentials.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Attempt to load profile from Firestore
+      const userProfile = await fetchUserProfile(fbUser.uid);
+      if (userProfile) {
+        playAiVoiceGreeting(userProfile.name.split(' ')[0] || 'User');
+        onAuthSuccess(userProfile);
+      } else {
+        // Fallback profile if Firestore user is missing
+        const fallbackUser: UserAccount = {
+          id: fbUser.uid,
+          name: fbUser.displayName || email.split('@')[0],
+          email: fbUser.email || email,
+          role: role,
+          avatar: avatarUrl,
+          handle: `@${email.split('@')[0]}`,
+          isVerified: true,
+        };
+        onAuthSuccess(fallbackUser);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Login failed.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Password Reset Flow
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setResetSuccessMsg(null);
+
+    if (!email || !email.includes('@')) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await sendPasswordReset(email);
+      setResetSuccessMsg(res.message);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Password reset request failed.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Builder helper for Creator profile
+  const buildCreatorObject = (acc: UserAccount): Creator => ({
+    id: `creator-${acc.id}`,
+    name: acc.name,
+    gender: gender,
+    handle: acc.handle,
+    avatar: acc.avatar,
+    specialization: specialization,
+    bio: `Specializing in ${specialization} with certified pipelines across ${selectedTools.join(', ')}. Open for brand commissions.`,
+    location: location,
+    skills: ['Prompt Engineering', 'Keyframe Generation', 'Motion Interpolation', 'Seed Matching'],
+    tools: selectedTools,
+    isVerified: true,
+    verifiedDetails: {
+      certifiedPipeline: 'Certified Neural Creator Protocol v1.0',
+      auditDate: 'Today',
+      safetyScore: 99.8,
+      commercialRightsGuaranteed: true,
+    },
+    rating: 5.0,
+    reviewCount: 1,
+    completedProjects: 0,
+    hourlyRate: 8500,
+    avgTurnaround: '48 Hours',
+    availableNow: true,
+    portfolio: [
+      {
+        id: `port-${Date.now()}-1`,
+        title: `${specialization} Demo Showcase`,
+        type: 'video',
+        mediaUrl: 'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=1200&q=80',
+        thumbnail: 'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=600&q=80',
+        specificModel: selectedTools.join(' + '),
+        workflowDescription: `Synthesized via ${selectedTools.join(' -> ')} with deterministic seed locking.`,
+        aspectRatio: '16:9',
+        duration: '0:30',
+        client: 'GenCraft Showcase',
+      }
+    ],
+    reviews: []
+  });
 
   // Quick preset test candidates for immediate 1-click evaluation
   const setQuickCandidate = (presetRole: UserRole, presetGender: 'male' | 'female', presetName: string, presetEmail: string, presetSpecialization?: string) => {
@@ -193,7 +376,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
     setEmail(presetEmail);
     if (presetSpecialization) setSpecialization(presetSpecialization);
     setOtpStep('input-details');
-    setOtpSentNotice(null);
+    setErrorMsg(null);
   };
 
   // Instant Lifetime Public Access entry handler
@@ -209,9 +392,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
       companyName: 'Open Public Access (Lifetime)',
       isVerified: true,
     };
-    if (onVoiceSpoken) {
-      onVoiceSpoken('Guest Explorer');
-    }
+    if (onVoiceSpoken) onVoiceSpoken('Guest Explorer');
     playAiVoiceGreeting('Guest Explorer');
     onAuthSuccess(publicUser);
   };
@@ -228,9 +409,9 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-zinc-950 text-zinc-100 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-      {/* Subtle Grid & Gradient Ambient Background */}
+      {/* Ambient Glow */}
       <div className="absolute inset-0 bg-grid-subtle pointer-events-none opacity-25" />
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-white/[0.03] rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-emerald-500/[0.04] rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative w-full max-w-xl mx-auto my-auto z-10 animate-fade-in">
         
@@ -240,7 +421,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>GenCraft Access Gate</span>
             <span className="text-zinc-600">•</span>
-            <span className="text-zinc-400 font-mono text-[11px]">Email OTP Verified</span>
+            <span className="text-zinc-400 font-mono text-[11px]">Production Auth Active</span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
@@ -252,383 +433,404 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
         </div>
 
         {/* Main Card */}
-        <div className="rounded-2xl bg-zinc-900/90 border border-zinc-800 backdrop-blur-xl p-6 sm:p-7 shadow-2xl space-y-6">
+        <div className="rounded-2xl bg-zinc-900/90 border border-zinc-800 backdrop-blur-xl p-6 sm:p-7 shadow-2xl space-y-5">
           
-          {/* Instant Lifetime Public Access Option */}
+          {/* Lifetime Access Shortcut */}
           <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/40 via-zinc-900 to-zinc-950 border border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-inner">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
-                <Globe className="w-4 h-4" />
+                <Sparkles className="w-4 h-4" />
               </div>
-              <div>
+              <div className="text-left">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-white tracking-tight">Lifetime Public Access</span>
-                  <span className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">100% Free Forever</span>
+                  <span className="text-xs font-bold text-emerald-400">Public Access Pass</span>
+                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                    LIFETIME FREE
+                  </span>
                 </div>
-                <p className="text-[11px] text-zinc-400 leading-tight">Explore creators, live chat, and the AI brief builder without signup.</p>
+                <p className="text-[11px] text-zinc-400">Instant exploration mode without typing passwords</p>
               </div>
             </div>
+
             <button
-              type="button"
               onClick={handlePublicLifetimeAccess}
-              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs whitespace-nowrap transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0"
             >
-              <span>Instant Entry</span>
+              <span>Instant Enter</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-zinc-800 w-full" />
-            <span className="bg-zinc-900 px-3 text-[10px] text-zinc-500 font-medium uppercase tracking-wider shrink-0">
-              or sign in / register with email otp
-            </span>
-            <div className="border-t border-zinc-800 w-full" />
-          </div>
-
-          {/* Top Tabs: Sign In vs Register */}
-          <div className="flex p-1 bg-zinc-950 rounded-xl border border-zinc-800">
+          {/* Mode Tabs: Signup | Signin | Reset */}
+          <div className="flex items-center p-1 rounded-xl bg-zinc-950 border border-zinc-850">
             <button
-              type="button"
-              onClick={() => {
-                setMode('register');
-                setOtpStep('input-details');
-                setOtpSentNotice(null);
-              }}
+              onClick={() => { setAuthMode('signup'); setOtpStep('input-details'); setErrorMsg(null); }}
               className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                mode === 'register' 
-                  ? 'bg-zinc-850 text-white shadow-sm border border-zinc-700/60' 
-                  : 'text-zinc-400 hover:text-zinc-200'
+                authMode === 'signup' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              Candidate Registration
+              Register & Join
             </button>
             <button
-              type="button"
-              onClick={() => {
-                setMode('signin');
-                setOtpStep('input-details');
-                setOtpSentNotice(null);
-              }}
+              onClick={() => { setAuthMode('signin'); setErrorMsg(null); }}
               className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
-                mode === 'signin' 
-                  ? 'bg-zinc-850 text-white shadow-sm border border-zinc-700/60' 
-                  : 'text-zinc-400 hover:text-zinc-200'
+                authMode === 'signin' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
-              Registered Sign In
+              Sign In
+            </button>
+            <button
+              onClick={() => { setAuthMode('reset'); setErrorMsg(null); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
+                authMode === 'reset' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              Reset Password
             </button>
           </div>
 
-          {/* Role Choice */}
-          <div>
-            <label className="block text-[11px] font-medium uppercase tracking-wider text-zinc-400 mb-2">
-              Select Your Role:
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setRole('creator')}
-                className={`p-3 rounded-xl border text-left transition-all flex items-start gap-3 ${
-                  role === 'creator'
-                    ? 'bg-zinc-800/80 border-white/40 text-white ring-1 ring-white/20'
-                    : 'bg-zinc-950/60 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0 text-zinc-200">
-                  <Sparkles className="w-4 h-4 text-emerald-400" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-white">AI Creator / Employee</div>
-                  <div className="text-[11px] text-zinc-400 leading-tight mt-0.5">Veo, Kling, Sora, Flux.1, ElevenLabs, Pika</div>
-                </div>
-              </button>
+          {/* Google Authentication Button */}
+          <div className="space-y-3">
+            <button
+              onClick={handleGoogleAuth}
+              disabled={isLoading}
+              className="w-full py-3 rounded-xl bg-zinc-950 hover:bg-zinc-800/80 border border-zinc-750 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-2.5 transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"/>
+                <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/>
+                <path fill="#FBBC05" d="M5.6 14.8c-.3-.8-.4-1.8-.4-2.8s.1-2 .4-2.8L1.9 6.3C.7 8.7 0 10.3 0 12s.7 3.3 1.9 5.7l3.7-2.9z"/>
+                <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"/>
+              </svg>
+              <span>Continue with Google</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setRole('brand')}
-                className={`p-3 rounded-xl border text-left transition-all flex items-start gap-3 ${
-                  role === 'brand'
-                    ? 'bg-zinc-800/80 border-white/40 text-white ring-1 ring-white/20'
-                    : 'bg-zinc-950/60 border-zinc-850 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0 text-zinc-200">
-                  <Building className="w-4 h-4 text-blue-400" />
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-white">Brand / Client</div>
-                  <div className="text-[11px] text-zinc-400 leading-tight mt-0.5">Post briefs, commission commercial talent</div>
-                </div>
-              </button>
+            <div className="relative flex items-center justify-center my-2">
+              <div className="border-t border-zinc-800 w-full" />
+              <span className="bg-zinc-900 px-3 text-[11px] text-zinc-500 font-mono uppercase tracking-wider shrink-0">
+                or continue with email
+              </span>
             </div>
           </div>
 
-          {/* STEP 1: Input Candidate Details */}
-          {otpStep === 'input-details' && (
-            <form onSubmit={handleSendOtp} className="space-y-4">
-              
-              {/* Full Name & Avatar Preview */}
+          {/* Error & Success Messages */}
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-red-950/60 border border-red-800/80 text-red-200 text-xs flex items-center gap-2.5 animate-shake">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {resetSuccessMsg && (
+            <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-800/80 text-emerald-200 text-xs flex items-center gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{resetSuccessMsg}</span>
+            </div>
+          )}
+
+          {/* Form Content per Mode */}
+          {authMode === 'reset' && (
+            <form onSubmit={handlePasswordReset} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-medium uppercase tracking-wider text-zinc-400 mb-1.5">
-                  Candidate Full Name
-                </label>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">Account Email Address</label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-zinc-500 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Karthik Subramanian or Ananya Nair"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Gender Avatar Selector */}
-              <div>
-                <label className="block text-[11px] font-medium uppercase tracking-wider text-zinc-400 mb-1.5">
-                  Candidate Gender (Select Avatar Representation)
-                </label>
-                <div className="flex items-center gap-4 p-3 rounded-xl bg-zinc-950 border border-zinc-850">
-                  {/* Live Avatar Preview */}
-                  <img
-                    src={avatarUrl}
-                    alt="Candidate Avatar Preview"
-                    className="w-12 h-12 rounded-full border border-zinc-700 bg-zinc-900 object-cover shrink-0 shadow-sm"
-                  />
-
-                  <div className="flex-1 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setGender('male')}
-                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium border flex items-center justify-center gap-2 transition-all ${
-                        gender === 'male'
-                          ? 'bg-zinc-800 text-white border-zinc-600 shadow-sm'
-                          : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200'
-                      }`}
-                    >
-                      <span>Boy / Male Avatar</span>
-                      {gender === 'male' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setGender('female')}
-                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium border flex items-center justify-center gap-2 transition-all ${
-                        gender === 'female'
-                          ? 'bg-zinc-800 text-white border-zinc-600 shadow-sm'
-                          : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-zinc-200'
-                      }`}
-                    >
-                      <span>Girl / Female Avatar</span>
-                      {gender === 'female' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Email Address */}
-              <div>
-                <label className="block text-[11px] font-medium uppercase tracking-wider text-zinc-400 mb-1.5">
-                  Candidate Email (For OTP Verification)
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-3" />
+                  <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="candidate@studio.in"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all"
+                    placeholder="name@company.com"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
                   />
                 </div>
               </div>
 
-              {/* Creator Specific Fields */}
-              {role === 'creator' && mode === 'register' && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-medium uppercase tracking-wider text-zinc-400 mb-1.5">
-                        Specialization Field
-                      </label>
-                      <select
-                        value={specialization}
-                        onChange={(e) => setSpecialization(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 focus:outline-none focus:border-zinc-600"
-                      >
-                        <option value="AI Filmmaker & Commercial Director">AI Filmmaker & Commercial Director</option>
-                        <option value="Gen-AI Animator & Character Motion">Gen-AI Animator & Character Motion</option>
-                        <option value="Photorealistic Product Visualist">Photorealistic Product Visualist</option>
-                        <option value="AI Voice Actor & Sonic Branding">AI Voice Actor & Sonic Branding</option>
-                        <option value="Sci-Fi Worldbuilder & Neural 3D">Sci-Fi Worldbuilder & Neural 3D</option>
-                        <option value="High-Fashion Editorial & Avant-Garde">High-Fashion Editorial & Avant-Garde</option>
-                        <option value="Stylized 3D & Mascot Animation">Stylized 3D & Mascot Animation</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-medium uppercase tracking-wider text-zinc-400 mb-1.5">
-                        Location (Indian Hub)
-                      </label>
-                      <div className="relative">
-                        <MapPin className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-3" />
-                        <input
-                          type="text"
-                          value={location}
-                          onChange={(e) => setLocation(e.target.value)}
-                          placeholder="e.g. Bengaluru, Karnataka"
-                          className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 focus:outline-none focus:border-zinc-600"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Production Tools Checkboxes: Strictly Veo, Kling, Sora, Flux.1, ElevenLabs, Pika */}
-                  <div>
-                    <label className="block text-[11px] font-medium uppercase tracking-wider text-zinc-400 mb-1.5">
-                      Production AI Tools Mastery (Choose all that apply):
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['Veo', 'Kling', 'Sora', 'Flux.1', 'ElevenLabs', 'Pika'].map((tool) => {
-                        const isSelected = selectedTools.includes(tool);
-                        return (
-                          <button
-                            key={tool}
-                            type="button"
-                            onClick={() => toggleTool(tool)}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-mono border transition-all flex items-center justify-between ${
-                              isSelected
-                                ? 'bg-zinc-800 text-white border-zinc-600 shadow-sm'
-                                : 'bg-zinc-950 text-zinc-500 border-zinc-850 hover:border-zinc-700 hover:text-zinc-300'
-                            }`}
-                          >
-                            <span>{tool}</span>
-                            {isSelected && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Brand Specific Field */}
-              {role === 'brand' && mode === 'register' && (
-                <div>
-                  <label className="block text-[11px] font-medium uppercase tracking-wider text-zinc-400 mb-1.5">
-                    Brand / Agency Name
-                  </label>
-                  <div className="relative">
-                    <Building className="w-4 h-4 text-zinc-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="e.g. Kaveri Creative Studios"
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Submit Button to Request OTP */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  className="w-full py-3 rounded-xl font-semibold text-xs sm:text-sm bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center gap-2 transition-all shadow-lg shadow-white/5 active:scale-[0.99]"
-                >
-                  <Mail className="w-4 h-4 text-zinc-900" />
-                  <span>Send 6-Digit Email Verification Code</span>
-                  <ArrowRight className="w-4 h-4 text-zinc-900" />
-                </button>
-              </div>
-
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors flex items-center justify-center gap-2"
+              >
+                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                <span>Send Reset Password Email</span>
+              </button>
             </form>
           )}
 
-          {/* STEP 2: Verify 6-digit OTP */}
-          {otpStep === 'verify-otp' && (
-            <form onSubmit={handleVerifyOtp} className="space-y-5 animate-fade-in">
+          {authMode === 'signin' && (
+            <form onSubmit={handleEmailSignIn} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">Email Address</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="arjun.ai@creators.in"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">Password</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3.5 rounded-xl font-semibold text-xs sm:text-sm bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.99]"
+              >
+                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin text-zinc-900" /> : <ShieldCheck className="w-4 h-4 text-emerald-600" />}
+                <span>Sign In to GenCraft</span>
+              </button>
+            </form>
+          )}
+
+          {authMode === 'signup' && otpStep === 'input-details' && (
+            <form onSubmit={handleSendVerificationCode} className="space-y-4">
               
-              {/* Simulated Live Dispatch Alert Banner */}
-              {otpSentNotice && (
-                <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-xs text-emerald-200 flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span className="font-semibold">{otpSentNotice}</span>
+              {/* Role Selection Cards */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-2">Select Account Role</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRole('creator')}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      role === 'creator'
+                        ? 'bg-zinc-800/90 border-emerald-500/60 ring-1 ring-emerald-500/30'
+                        : 'bg-zinc-950 border-zinc-800 hover:bg-zinc-900 text-zinc-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <Briefcase className={`w-4 h-4 ${role === 'creator' ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                      {role === 'creator' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                    </div>
+                    <div className="font-bold text-xs text-white">AI Creator / Director</div>
+                    <div className="text-[10px] text-zinc-400">Offer Gen-AI services, portfolios & rates</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRole('brand')}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      role === 'brand'
+                        ? 'bg-zinc-800/90 border-emerald-500/60 ring-1 ring-emerald-500/30'
+                        : 'bg-zinc-950 border-zinc-800 hover:bg-zinc-900 text-zinc-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <Building className={`w-4 h-4 ${role === 'brand' ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                      {role === 'brand' && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                    </div>
+                    <div className="font-bold text-xs text-white">Brand / Agency</div>
+                    <div className="text-[10px] text-zinc-400">Post briefs, hire talent & manage escrow</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Personal Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Full Name</label>
+                  <div className="relative">
+                    <User className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                    />
                   </div>
-                  <div className="flex items-center justify-between text-[11px] text-emerald-300/80 pt-1 border-t border-emerald-800/40">
-                    <span>Simulated Inbox Delivery</span>
-                    <button
-                      type="button"
-                      onClick={() => setEnteredOtp(generatedOtp)}
-                      className="underline font-bold text-white hover:text-emerald-300"
-                    >
-                      Click here to auto-fill ({generatedOtp})
-                    </button>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Email Address</label>
+                  <div className="relative">
+                    <Mail className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Password Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Password</label>
+                  <div className="relative">
+                    <Lock className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      className="w-full pl-8 pr-8 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Confirm Password</label>
+                  <div className="relative">
+                    <Lock className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repeat password"
+                      className="w-full pl-8 pr-8 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Role-Specific Fields */}
+              {role === 'brand' ? (
+                <div>
+                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Company / Studio Name</label>
+                  <div className="relative">
+                    <Building className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Primary Specialization</label>
+                    <input
+                      type="text"
+                      required
+                      value={specialization}
+                      onChange={(e) => setSpecialization(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Primary Production AI Stack</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['Veo', 'Kling', 'Sora', 'Flux.1', 'ElevenLabs', 'Pika'].map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => toggleTool(t)}
+                          className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
+                            selectedTools.includes(t)
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-zinc-950 text-zinc-400 border border-zinc-800 hover:text-zinc-200'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">
-                    Enter 6-Digit Security OTP
-                  </label>
+              {/* Submit to Send Code */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3.5 rounded-xl font-semibold text-xs sm:text-sm bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.99] disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-zinc-900" />
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 text-emerald-600" />
+                    <span>Send Verification Code to Email</span>
+                    <ArrowRight className="w-4 h-4 text-zinc-900" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* OTP Verification Step */}
+          {authMode === 'signup' && otpStep === 'verify-otp' && (
+            <form onSubmit={handleVerifyCodeAndSubmit} className="space-y-4">
+              <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-300 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white">Verification Challenge Dispatched</span>
                   <button
                     type="button"
                     onClick={() => setOtpStep('input-details')}
-                    className="text-xs text-zinc-400 hover:text-white underline"
+                    className="text-xs text-emerald-400 hover:underline"
                   >
-                    Edit Email / Info
+                    Edit details
                   </button>
                 </div>
+                <p className="text-[11px] text-zinc-400">
+                  {otpNotice || `Enter the 6-digit security code sent to ${email}.`}
+                </p>
+              </div>
 
-                <div className="relative">
-                  <KeyRound className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-2 text-center">
+                  6-Digit Verification Code
+                </label>
+                <div className="flex justify-center">
                   <input
                     type="text"
                     maxLength={6}
                     required
-                    autoFocus
                     value={enteredOtp}
                     onChange={(e) => setEnteredOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="Enter 6-digit code"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-zinc-950 border border-zinc-700 text-lg sm:text-xl font-mono text-center tracking-widest text-white focus:outline-none focus:border-white focus:ring-1 focus:ring-white transition-all"
+                    placeholder="123456"
+                    className="w-48 px-4 py-3 rounded-xl bg-zinc-950 border-2 border-emerald-500/60 text-center font-mono text-xl tracking-[8px] text-white focus:outline-none focus:border-emerald-400"
                   />
                 </div>
-
-                {otpError && (
-                  <p className="text-xs text-red-400 mt-2 font-medium">
-                    {otpError}
-                  </p>
-                )}
               </div>
 
-              {/* Resend OTP Row */}
-              <div className="flex items-center justify-between text-xs text-zinc-400">
-                <span>Didn’t receive the code?</span>
-                {resendCooldown > 0 ? (
-                  <span className="text-zinc-500 font-mono">
-                    Resend in {resendCooldown}s
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleSendOtp()}
-                    className="text-white hover:underline flex items-center gap-1"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    <span>Resend OTP Code</span>
-                  </button>
-                )}
+              <div className="flex items-center justify-between text-xs">
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0 || isLoading}
+                  onClick={handleSendVerificationCode}
+                  className="text-zinc-400 hover:text-white disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>{resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}</span>
+                </button>
               </div>
 
-              {/* AI Voice Bot Notice Indicator */}
               <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-850 flex items-center gap-2.5 text-xs text-zinc-400">
                 <Volume2 className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
                 <span>
@@ -636,75 +838,54 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                 </span>
               </div>
 
-              {/* Verify & Enter Button */}
               <button
                 type="submit"
-                disabled={isVerifying || enteredOtp.length !== 6}
+                disabled={isLoading || enteredOtp.length !== 6}
                 className="w-full py-3.5 rounded-xl font-semibold text-xs sm:text-sm bg-white hover:bg-zinc-200 disabled:opacity-50 text-zinc-950 flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.99]"
               >
-                {isVerifying ? (
+                {isLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-zinc-900" />
-                    <span>Verifying OTP & Initializing AI Voice...</span>
+                    <span>Verifying Code & Activating Account...</span>
                   </>
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    <span>Verify Email & Enter GenCraft</span>
+                    <span>Verify Code & Complete Activation</span>
                     <ArrowRight className="w-4 h-4 text-zinc-900" />
                   </>
                 )}
               </button>
-
             </form>
           )}
 
-          {/* Quick Demo Candidate Profiles (1-Click Evaluation) */}
+          {/* Preset Candidates (1-Click Evaluation) */}
           <div className="pt-2 border-t border-zinc-800">
             <span className="text-[11px] font-mono text-zinc-500 uppercase tracking-wider block mb-2">
               ⚡ Instant 1-Click Candidate Evaluation Presets:
             </span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => setQuickCandidate('creator', 'male', 'Karthik Subramanian', 'karthik.subramanian@creators.in', 'AI Filmmaker & Commercial Director')}
-                className="px-2.5 py-2 rounded-lg bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-left text-[11px] text-zinc-300 transition-colors"
+                onClick={() => setQuickCandidate('creator', 'male', 'Arjun Nambiar', 'arjun.ai@creators.in', 'AI Commercial Director & VFX Specialist')}
+                className="p-2 rounded-lg bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-left text-zinc-300 transition-colors"
               >
-                <div className="font-semibold text-white">👨 Karthik (Boy)</div>
-                <div className="text-zinc-500 text-[10px]">AI Filmmaker (Veo/Kling)</div>
+                <span className="font-semibold text-white block">👨🏻‍💻 Arjun Nambiar</span>
+                <span className="text-[10px] text-zinc-400">Male Creator • Bengaluru</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setQuickCandidate('creator', 'female', 'Ananya Nair', 'ananya.nair@creators.in', 'Gen-AI Animator & Character Motion')}
-                className="px-2.5 py-2 rounded-lg bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-left text-[11px] text-zinc-300 transition-colors"
+                onClick={() => setQuickCandidate('creator', 'female', 'Priya Sharma', 'priya.cinema@ai.in', 'High-Fashion & Beauty Gen-AI Director')}
+                className="p-2 rounded-lg bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-left text-zinc-300 transition-colors"
               >
-                <div className="font-semibold text-white">👩 Ananya (Girl)</div>
-                <div className="text-zinc-500 text-[10px]">Gen-AI Animator (Sora/Kling)</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setQuickCandidate('brand', 'male', 'Rohan Mehra', 'rohan@kaveristudios.in')}
-                className="px-2.5 py-2 rounded-lg bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 text-left text-[11px] text-zinc-300 transition-colors"
-              >
-                <div className="font-semibold text-white">🏢 Kaveri Studios</div>
-                <div className="text-zinc-500 text-[10px]">Brand Client</div>
+                <span className="font-semibold text-white block">👩🏻‍🎨 Priya Sharma</span>
+                <span className="text-[10px] text-zinc-400">Female Creator • Mumbai</span>
               </button>
             </div>
           </div>
 
         </div>
-
-        {/* Footer info */}
-        <div className="text-center mt-4 text-xs text-zinc-500 flex items-center justify-center gap-3 font-mono">
-          <span>Enterprise 256-Bit SSL</span>
-          <span>•</span>
-          <span>Audited Seed Protocols</span>
-          <span>•</span>
-          <span>Indian Rupee Escrow</span>
-        </div>
-
       </div>
     </div>
   );

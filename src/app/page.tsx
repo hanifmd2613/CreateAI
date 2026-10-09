@@ -24,6 +24,7 @@ import {
   SPECIALIZATION_OPTIONS 
 } from '../data/mockData';
 import { Creator, Brief, PortfolioItem, PageView, UserAccount, UserRole } from '../types';
+import { signOutAuthUser, subscribeToAuthState, fetchUserProfile } from '../lib/auth';
 import { 
   Search, 
   Filter, 
@@ -240,6 +241,7 @@ export default function Home() {
   };
 
   const handleLogout = () => {
+    signOutAuthUser();
     setIsAuthenticated(false);
     setCurrentUser(null);
     try {
