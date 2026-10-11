@@ -71,8 +71,8 @@ body {
   opacity: 1;
 }
 
-/* Ensure contents stay layered above background light */
-.section-glow > * {
+/* Ensure contents stay layered above background light without stomping on higher z-indexes */
+:where(.section-glow > *) {
   position: relative;
   z-index: 2;
 }

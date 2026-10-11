@@ -79,9 +79,15 @@ export async function GET(req: NextRequest) {
         results = results.filter(c =>
           c.name.toLowerCase().includes(q) ||
           c.specialization.toLowerCase().includes(q) ||
+          c.bio.toLowerCase().includes(q) ||
           c.skills.some(s => s.toLowerCase().includes(q)) ||
           c.tools.some(t => t.toLowerCase().includes(q)) ||
-          c.location.toLowerCase().includes(q)
+          c.location.toLowerCase().includes(q) ||
+          c.portfolio.some(p => 
+            p.title.toLowerCase().includes(q) || 
+            (p.specificModel && p.specificModel.toLowerCase().includes(q)) ||
+            (p.workflowDescription && p.workflowDescription.toLowerCase().includes(q))
+          )
         );
       }
     }

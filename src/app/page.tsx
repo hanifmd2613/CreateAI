@@ -374,20 +374,28 @@ export default function Home() {
     });
   }, [creators]);
 
-  // Live matching creators in Search Bar Dropdown
+  // Live matching creators in Search Bar Dropdown (only active when searching)
   const searchDropdownCreators = useMemo(() => {
     if (!searchQuery.trim()) {
-      return uniqueCreators.slice(0, 5);
+      return [];
     }
     const q = searchQuery.toLowerCase().trim();
     return uniqueCreators.filter(c => 
       c.name.toLowerCase().includes(q) ||
+      c.handle.toLowerCase().includes(q) ||
       c.specialization.toLowerCase().includes(q) ||
       c.skills.some(s => s.toLowerCase().includes(q)) ||
       c.tools.some(t => t.toLowerCase().includes(q)) ||
       c.location.toLowerCase().includes(q) ||
       c.bio.toLowerCase().includes(q) ||
-      c.portfolio.some(p => p.title.toLowerCase().includes(q) || (p.specificModel && p.specificModel.toLowerCase().includes(q)) || (p.model && p.model.toLowerCase().includes(q)))
+      c.portfolio.some(p => 
+        p.title.toLowerCase().includes(q) || 
+        (p.specificModel && p.specificModel.toLowerCase().includes(q)) || 
+        (p.model && p.model.toLowerCase().includes(q)) ||
+        (p.workflowDescription && p.workflowDescription.toLowerCase().includes(q)) ||
+        (p.client && p.client.toLowerCase().includes(q)) ||
+        (p.promptSnippet && p.promptSnippet.toLowerCase().includes(q))
+      )
     );
   }, [uniqueCreators, searchQuery]);
 
@@ -408,7 +416,9 @@ export default function Home() {
           const matchesPortfolio = creator.portfolio.some(p => 
             p.title.toLowerCase().includes(q) || 
             (p.specificModel && p.specificModel.toLowerCase().includes(q)) ||
-            (p.workflowDescription && p.workflowDescription.toLowerCase().includes(q))
+            (p.workflowDescription && p.workflowDescription.toLowerCase().includes(q)) ||
+            (p.client && p.client.toLowerCase().includes(q)) ||
+            (p.promptSnippet && p.promptSnippet.toLowerCase().includes(q))
           );
 
           if (!matchesName && !matchesHandle && !matchesBio && !matchesSpec && !matchesSkills && !matchesTools && !matchesLocation && !matchesPortfolio) {
@@ -455,7 +465,7 @@ export default function Home() {
         if (sortBy === 'rate-high') return b.hourlyRate - a.hourlyRate;
         return 0;
       });
-  }, [creators, searchQuery, selectedTool, selectedContentType, selectedSpecialization, verifiedOnly, sortBy]);
+  }, [uniqueCreators, searchQuery, selectedTool, selectedContentType, selectedSpecialization, verifiedOnly, sortBy]);
 
   // Reset all filters
   const resetFilters = () => {
@@ -561,7 +571,11 @@ export default function Home() {
             <FadeInSection delayMs={100} className="bg-zinc-900/60 backdrop-blur-md rounded-2xl border border-zinc-800 p-5 mb-8 space-y-4 shadow-sm relative z-30">
               
               {/* Primary Search Input with Interactive Dropdown Container */}
-              <div ref={searchContainerRef} className="relative z-50">
+              <div 
+                ref={searchContainerRef} 
+                className="relative"
+                style={{ zIndex: isSearchFocused && searchQuery.trim().length > 0 ? 50 : 20 }}
+              >
                 <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3.5 z-10" />
                 <input
                   type="text"
@@ -569,7 +583,7 @@ export default function Home() {
                   onFocus={() => setIsSearchFocused(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === 'Enter' || e.key === 'Escape') {
                       setIsSearchFocused(false);
                     }
                   }}
@@ -579,7 +593,10 @@ export default function Home() {
                 <div className="absolute right-3.5 top-2.5 flex items-center gap-1.5 z-10">
                   {searchQuery && (
                     <button
-                      onClick={() => setSearchQuery('')}
+                      onClick={() => {
+                        setSearchQuery('');
+                        setIsSearchFocused(false);
+                      }}
                       className="text-zinc-400 hover:text-white p-1"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -597,7 +614,10 @@ export default function Home() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setSearchQuery('')}
+                    onClick={() => {
+                      setSearchQuery('');
+                      setIsSearchFocused(false);
+                    }}
                     className={`px-2.5 py-1 rounded-lg text-xs transition-colors shrink-0 ${
                       searchQuery === ''
                         ? 'bg-white text-zinc-950 font-semibold'
@@ -633,15 +653,19 @@ export default function Home() {
                   })}
                 </div>
 
-                {/* Live Suggestions Dropdown (100% Solid Opaque Background, Closes on Enter/Click/Esc) */}
-                {isSearchFocused && (
+                {/* Live Suggestions Dropdown (Only appears when user is actively typing a query, with guaranteed solid opaque background) */}
+                {isSearchFocused && searchQuery.trim().length > 0 && (
                   <div 
-                    className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-[#09090b] border border-zinc-700 shadow-2xl p-4 z-[9999] space-y-3 ring-1 ring-white/10"
+                    className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-[#09090b] border border-zinc-700 shadow-2xl p-4 space-y-3 ring-1 ring-white/10 backdrop-blur-xl"
+                    style={{ zIndex: 9999, backgroundColor: '#09090b' }}
                     onMouseDown={(e) => e.preventDefault()}
                   >
                     {/* Header */}
                     <div className="flex items-center justify-between text-[11px] font-mono uppercase text-zinc-400 pb-2 border-b border-zinc-800">
-                      <span>Search Creators by Topic / Field:</span>
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Creators matching &ldquo;{searchQuery}&rdquo; ({searchDropdownCreators.length})</span>
+                      </span>
                       <button
                         type="button"
                         onClick={() => setIsSearchFocused(false)}
@@ -651,106 +675,86 @@ export default function Home() {
                       </button>
                     </div>
 
-                    {/* Quick Topic Chips Inside Dropdown */}
-                    <div className="flex flex-wrap gap-1.5">
-                      {POPULAR_FIELDS.map((field) => (
-                        <button
-                          key={field.label}
-                          type="button"
-                          onClick={() => {
-                            setSearchQuery(field.query);
-                            setIsSearchFocused(false);
-                          }}
-                          className="px-2.5 py-1 rounded-lg text-xs bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 hover:border-zinc-700 transition-colors"
-                        >
-                          {field.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Matching Creators of that Field */}
-                    <div className="border-t border-zinc-800 pt-2.5">
-                      <span className="text-[11px] font-mono uppercase text-zinc-400 block mb-2">
-                        {searchQuery ? `Creators in "${searchQuery}":` : 'Top Specialists in Selected Fields:'}
-                      </span>
-
-                      {searchDropdownCreators.length === 0 ? (
-                        <div className="py-4 text-center text-xs text-zinc-500">
-                          No creators found matching &ldquo;{searchQuery}&rdquo;. Click one of the topic tags above to explore specialists.
-                        </div>
-                      ) : (
-                        <div className="max-h-72 overflow-y-auto space-y-2 pr-1 no-scrollbar">
-                          {searchDropdownCreators.slice(0, 6).map((c) => (
-                            <div
-                              key={c.id}
-                              className="p-2.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 transition-all flex items-center justify-between gap-3 group"
+                    {/* Matching Creators */}
+                    {searchDropdownCreators.length === 0 ? (
+                      <div className="py-4 text-center text-xs text-zinc-500">
+                        No creators found matching &ldquo;{searchQuery}&rdquo;. Press Enter or browse through the topic tags above.
+                      </div>
+                    ) : (
+                      <div className="max-h-72 overflow-y-auto space-y-2 pr-1 no-scrollbar">
+                        {searchDropdownCreators.slice(0, 6).map((c) => (
+                          <div
+                            key={c.id}
+                            className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 transition-all flex items-center justify-between gap-3 group"
+                          >
+                            <div 
+                              onClick={() => {
+                                handleSelectCreator(c);
+                                setIsSearchFocused(false);
+                              }}
+                              className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
                             >
-                              <div 
+                              <img
+                                src={c.avatar}
+                                alt={c.name}
+                                className="w-10 h-10 rounded-full object-cover border border-zinc-700 bg-zinc-900 shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-semibold text-white group-hover:text-zinc-200 truncate">
+                                    {c.name}
+                                  </span>
+                                  {c.isVerified && (
+                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-zinc-400 truncate">
+                                  {c.specialization}
+                                </p>
+                                <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono mt-0.5">
+                                  <span className="text-emerald-400 font-medium">₹{c.hourlyRate.toLocaleString('en-IN')}/hr</span>
+                                  <span>•</span>
+                                  <span>{c.tools.slice(0, 3).join(', ')}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleOpenChat(c);
+                                  setIsSearchFocused(false);
+                                }}
+                                className="px-2.5 py-1 text-xs rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 flex items-center gap-1"
+                              >
+                                <MessageSquare className="w-3 h-3 text-zinc-400" />
+                                <span>Chat</span>
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => {
                                   handleSelectCreator(c);
                                   setIsSearchFocused(false);
                                 }}
-                                className="flex items-center gap-3 cursor-pointer min-w-0 flex-1"
+                                className="px-2.5 py-1 text-xs font-medium rounded-lg bg-white hover:bg-zinc-200 text-zinc-950"
                               >
-                                <img
-                                  src={c.avatar}
-                                  alt={c.name}
-                                  className="w-10 h-10 rounded-full object-cover border border-zinc-700 bg-zinc-900 shrink-0"
-                                />
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-white group-hover:text-zinc-200 truncate">
-                                      {c.name}
-                                    </span>
-                                    {c.isVerified && (
-                                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                    )}
-                                  </div>
-                                  <p className="text-[11px] text-zinc-400 truncate">
-                                    {c.specialization}
-                                  </p>
-                                  <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono mt-0.5">
-                                    <span className="text-emerald-400 font-medium">₹{c.hourlyRate.toLocaleString('en-IN')}/hr</span>
-                                    <span>•</span>
-                                    <span>{c.tools.slice(0, 3).join(', ')}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleOpenChat(c);
-                                    setIsSearchFocused(false);
-                                  }}
-                                  className="px-2.5 py-1 text-xs rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 flex items-center gap-1"
-                                >
-                                  <MessageSquare className="w-3 h-3 text-zinc-400" />
-                                  <span>Chat</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleSelectCreator(c);
-                                    setIsSearchFocused(false);
-                                  }}
-                                  className="px-2.5 py-1 text-xs font-medium rounded-lg bg-white hover:bg-zinc-200 text-zinc-950"
-                                >
-                                  Profile
-                                </button>
-                              </div>
+                                Profile
+                              </button>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               {/* Filters Row: Tools Used, Content Type, Verified Toggle & Sort */}
-              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-1">
+              <div 
+                className="relative z-10 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pt-1"
+                style={{ zIndex: 10 }}
+              >
                 
                 {/* Dropdowns */}
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -832,7 +836,10 @@ export default function Home() {
               </div>
 
               {/* Specialization Quick Pills */}
-              <div className="pt-3 border-t border-zinc-800/80 flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+              <div 
+                className="relative z-10 pt-3 border-t border-zinc-800/80 flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar"
+                style={{ zIndex: 10 }}
+              >
                 <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500 mr-1 shrink-0">
                   Disciplines:
                 </span>

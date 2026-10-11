@@ -15,7 +15,7 @@ export const SEED_CREATORS = [
     specialization: 'AI Filmmaker & Commercial Director',
     bio: 'Pioneering narrative Gen-AI commercials and high-concept cinematic films. Winner of the 2024 Bengaluru AI Film Showcase Best Direction. Certified commercially-safe workflow pipeline with seed auditing.',
     location: 'Bengaluru, Karnataka',
-    skills: ['AI Filmmaking', 'Cinematic Prompting', 'Camera Motion Paths', 'Latent Motion Synthesis', 'Color Calibration', 'Audio Foley'],
+    skills: ['Automotive & Speed Direction', 'AI Filmmaking', 'Cinematic Prompting', 'Camera Motion Paths', 'Latent Motion Synthesis', 'Color Calibration', 'Audio Foley'],
     tools: ['Veo', 'Kling', 'Sora', 'ElevenLabs'],
     isVerified: true,
     verification: {
@@ -108,7 +108,7 @@ export const SEED_CREATORS = [
     specialization: 'Gen-AI Animator & Character Motion',
     bio: 'Crafting fluid stylized animation, character performance, and commercial motion graphics using Kling, Sora, and Pika video generation models.',
     location: 'Kochi, Kerala',
-    skills: ['Character Consistency', 'Sora Directing', 'Kling Motion', 'Pika Animation', 'ElevenLabs Sync'],
+    skills: ['3D Mascots & Character Animation', 'Character Consistency', 'Sora Directing', 'Kling Motion', 'Pika Animation', 'ElevenLabs Sync'],
     tools: ['Kling', 'Sora', 'Pika', 'ElevenLabs'],
     isVerified: true,
     verification: {
