@@ -1,6 +1,6 @@
-# CreateAI — Generative AI Content Creator Marketplace & Studio
+# GenCraft — Generative AI Content Creator Marketplace & Studio
 
-CreateAI is a high-fidelity, interactive web application connecting enterprise brands with vetted Generative AI directors and creators. Built with **Next.js 14 (App Router)**, **React 18**, **Tailwind CSS**, and **Lucide React**.
+GenCraft is a high-fidelity, interactive web application connecting enterprise brands with vetted Generative AI directors and creators. Built with **Next.js 14 (App Router)**, **React 18**, **Tailwind CSS**, and **Lucide React**.
 
 ---
 

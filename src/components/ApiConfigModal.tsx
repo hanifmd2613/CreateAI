@@ -132,7 +132,7 @@ export const ApiConfigModal: React.FC<ApiConfigModalProps> = ({
           <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-400 flex items-start gap-2">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
             <span>
-              If no API key is specified, CreateAI utilizes its built-in engine with structured enterprise output.
+              If no API key is specified, GenCraft utilizes its built-in engine with structured enterprise output.
             </span>
           </div>
 

@@ -3,8 +3,8 @@ import './globals.css';
 import { CameraCursor } from '../components/CameraCursor';
 
 export const metadata: Metadata = {
-  title: 'CreateAI | The Generative AI Content Creator Marketplace',
-  description: 'Connect with specialized Generative AI creators. High-fidelity cinematic commercials, photorealistic product assets, character animation, and verified AI pipelines.',
+  title: 'gencraft | The AI Content Creator Marketplace',
+  description: 'gencraft connects brands with specialized Generative AI creators. High-fidelity cinematic commercials, vertical UGC, photorealistic packshots, and verified AI pipelines.',
   icons: {
     icon: '/favicon.ico',
   },

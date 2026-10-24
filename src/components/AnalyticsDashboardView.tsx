@@ -39,7 +39,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({ 
         </h1>
 
         <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl leading-relaxed">
-          Measurable creator sourcing, commercial clearance velocity, and quality compliance metrics comparing automated kampus.VC workflows against traditional agency procurement.
+          Measurable creator sourcing, commercial clearance velocity, and quality compliance metrics comparing automated GenCraft workflows against traditional agency procurement.
         </p>
       </div>
 
@@ -163,7 +163,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({ 
         <div className="p-6 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-4 shadow-xl">
           <h3 className="text-base font-bold text-white flex items-center gap-2">
             <Scale className="w-4 h-4 text-blue-400" />
-            <span>Pilot Benchmark: Manual vs. kampus.VC Platform</span>
+            <span>Pilot Benchmark: Manual vs. GenCraft Platform</span>
           </h3>
 
           <div className="rounded-xl border border-zinc-800 overflow-hidden text-xs">
@@ -172,7 +172,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({ 
                 <tr className="bg-zinc-950 text-[10px] font-mono uppercase text-zinc-400 border-b border-zinc-800">
                   <th className="p-2.5">Workflow Phase</th>
                   <th className="p-2.5">Traditional Agency</th>
-                  <th className="p-2.5 text-emerald-400">kampus.VC Platform</th>
+                  <th className="p-2.5 text-emerald-400">GenCraft Platform</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/80">

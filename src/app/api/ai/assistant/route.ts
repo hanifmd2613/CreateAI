@@ -15,9 +15,9 @@ export async function POST(req: NextRequest) {
     if (geminiApiKey) {
       try {
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`;
-        const systemPrompt = `You are the official CreateAI System Assistant powered by Google Gemini. 
-CreateAI is an enterprise marketplace connecting brands with specialized Generative AI creators in India and globally.
-Features of CreateAI:
+        const systemPrompt = `You are the official GenCraft System Assistant powered by Google Gemini. 
+GenCraft is an enterprise marketplace connecting brands with specialized Generative AI creators in India and globally.
+Features of GenCraft:
 1. Creator Discovery: Search creators by name, field (Automotive, Fashion, 3D Mascots, Sonic, VFX), or models (Veo, Kling, Sora, Flux.1, ElevenLabs, Pika).
 2. AI-Assisted Brief Builder: Post campaign briefs manually or use the AI Assist button to convert rough ideas into structured parameters (title, style, aspect ratio, tools, deliverables, budget in INR).
 3. Direct Client ⇄ Employee Chat: Real-time messaging with creators, discussing rates, milestones, and scheduling.
@@ -60,11 +60,11 @@ Answer the user's question clearly, politely, and concisely using markdown bulle
       }
     }
 
-    // 2. Intelligent Built-in Gemini Knowledge Engine for CreateAI
+    // 2. Intelligent Built-in Gemini Knowledge Engine for GenCraft
     let reply = '';
 
     if (lower.includes('how to use') || lower.includes('website') || lower.includes('overview') || lower.includes('getting started')) {
-      reply = `**Welcome to CreateAI! Here is how to navigate and use the platform:**
+      reply = `**Welcome to GenCraft! Here is how to navigate and use the platform:**
 
 1. **Discover Creators**: Browse top vetted Gen-AI creators across India. Use the search bar to search by specific field (*Automotive, High-Fashion, 3D Mascots, Sound Design*) or filter by tools (*Veo, Kling, Sora, Flux.1, ElevenLabs, Pika*).
 2. **Direct Chat**: Click the **Chat** button on any creator card to start real-time messaging, review portfolio workflows, and inquire about availability.
@@ -88,9 +88,9 @@ Answer the user's question clearly, politely, and concisely using markdown bulle
 1. Go to **Discover Creators** and inspect verified creator profiles.
 2. Check their **Verified AI Workflow** badge, past project ratings, and hourly rate in ₹.
 3. Click **"Message"** to chat directly with the creator, or click **"Hire Creator"** to select a milestone package.
-4. Funds are placed into **CreateAI Escrow (in ₹)** and released only after you review and approve the final master assets.`;
+4. Funds are placed into **GenCraft Escrow (in ₹)** and released only after you review and approve the final master assets.`;
     } else if (lower.includes('tool') || lower.includes('model') || lower.includes('veo') || lower.includes('kling') || lower.includes('sora') || lower.includes('flux')) {
-      reply = `**Supported Production AI Tools on CreateAI:**
+      reply = `**Supported Production AI Tools on GenCraft:**
 
 • **Google Veo**: High-definition video generation with cinematic camera motion paths and liquid dynamics.
 • **Kling**: Ultra-fluid physics, fast-paced vehicle drifts, and character action motion.
@@ -112,9 +112,9 @@ Answer the user's question clearly, politely, and concisely using markdown bulle
 • Chat directly with the creator to clarify creative references, turnarounds, or delivery specifications.
 • Creators respond in real time with milestone estimates and availability!`;
     } else {
-      reply = `**CreateAI Gemini System Assistant:**
+      reply = `**GenCraft Gemini System Assistant:**
 
-I can assist you with everything on CreateAI:
+I can assist you with everything on GenCraft:
 • **Finding Talent**: Search creators by specialized field (Automotive, Fashion, Mascot 3D, Sonic) or AI tool (Veo, Kling, Sora, Flux.1, ElevenLabs, Pika).
 • **AI Brief Builder**: Structure campaign prompts with one click in the brief builder.
 • **Direct Messaging**: Connect directly with creator employees.
@@ -125,7 +125,7 @@ Feel free to ask a specific question or test out our features!`;
 
     return NextResponse.json({
       success: true,
-      provider: 'createai-gemini-engine',
+      provider: 'gencraft-gemini-engine',
       reply: reply
     });
 

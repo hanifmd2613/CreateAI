@@ -14,7 +14,7 @@ export const playAiVoiceGreeting = (name: string): Promise<boolean> => {
       window.speechSynthesis.cancel(); // Stop any pending utterances
 
       const cleanName = name ? name.split(' ')[0] : 'there';
-      const greetingText = `Hello ${cleanName}, and welcome to CreateAI.`;
+      const greetingText = `Hello ${cleanName}, and welcome to GenCraft.`;
 
       const utterance = new SpeechSynthesisUtterance(greetingText);
       utterance.rate = 0.92; // Slightly measured, elegant professional cadence

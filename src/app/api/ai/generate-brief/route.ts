@@ -166,7 +166,7 @@ Required JSON fields: title, contentType, style, aspectRatio (16:9, 9:16, 1:1, o
 
     return NextResponse.json({
       success: true,
-      provider: 'createai-neural-engine',
+      provider: 'gencraft-neural-engine',
       brief: {
         title,
         contentType,
