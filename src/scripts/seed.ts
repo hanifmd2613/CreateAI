@@ -8,6 +8,8 @@ import { VersionFeedbackModel } from '../lib/models/VersionFeedback';
 import { DeliveryCheckModel } from '../lib/models/DeliveryCheck';
 import { AuditLogModel } from '../lib/models/AuditLog';
 import { computeCreatorMatch } from '../lib/matching';
+import { MOCK_CREATORS } from '../data/mockData';
+import { demoContactedEngagement } from '../lib/engagementStore';
 
 export const SEED_CREATORS = [
   {
@@ -406,7 +408,7 @@ export async function seedDatabase() {
     console.log('Cleared existing collections.');
 
     // 2. Insert Creators
-    const createdCreators = await CreatorModel.insertMany(SEED_CREATORS);
+    const createdCreators = await CreatorModel.insertMany(MOCK_CREATORS);
     console.log(`Successfully seeded ${createdCreators.length} Creators.`);
 
     // 3. Insert Briefs
@@ -416,7 +418,7 @@ export async function seedDatabase() {
     // 4. Precompute & Insert Match Results for NovaPhone demo brief
     const demoBrief: any = createdBriefs[0];
     if (demoBrief) {
-      const matchRecords = SEED_CREATORS.map(creator => {
+      const matchRecords = MOCK_CREATORS.map(creator => {
         const match = computeCreatorMatch(demoBrief as any, creator as any);
         return {
           briefId: demoBrief.id,
@@ -476,6 +478,30 @@ export async function seedDatabase() {
       revisionsUsed: 1,
       createdAt: new Date(Date.now() - 3600 * 1000 * 24),
       updatedAt: new Date(),
+    });
+
+    // 5b. Seed Pending CONTACTED Proposal for Creator Workspace decision test
+    await EngagementModel.create({
+      id: demoContactedEngagement.id,
+      briefId: demoContactedEngagement.briefId,
+      brandId: demoContactedEngagement.brandId,
+      brandName: demoContactedEngagement.brandName,
+      brandAvatar: demoContactedEngagement.brandAvatar,
+      creatorId: demoContactedEngagement.creatorId,
+      creatorName: demoContactedEngagement.creatorName,
+      creatorAvatar: demoContactedEngagement.creatorAvatar,
+      projectTitle: demoContactedEngagement.projectTitle,
+      proposedBudget: demoContactedEngagement.proposedBudget,
+      status: demoContactedEngagement.status,
+      licensingStatus: demoContactedEngagement.licensingStatus,
+      message: demoContactedEngagement.message,
+      milestones: demoContactedEngagement.milestones,
+      agreedTerms: demoContactedEngagement.agreedTerms,
+      currentVersionNumber: demoContactedEngagement.currentVersionNumber,
+      maxRevisions: demoContactedEngagement.maxRevisions,
+      revisionsUsed: demoContactedEngagement.revisionsUsed,
+      createdAt: new Date(demoContactedEngagement.createdAt),
+      updatedAt: new Date(demoContactedEngagement.updatedAt),
     });
 
     // Version 1 (30s duration -> failed check)

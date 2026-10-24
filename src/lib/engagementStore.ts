@@ -368,8 +368,9 @@ export async function saveEngagement(engagement: EngagementRecord): Promise<Enga
         { ...engagement, createdAt: new Date(engagement.createdAt), updatedAt: new Date(engagement.updatedAt) },
         { upsert: true, new: true }
       );
-    } catch (e) {
-      console.warn('MongoDB saveEngagement warning:', e);
+    } catch (e: any) {
+      console.error('MongoDB saveEngagement error:', e);
+      throw new Error(`Durable database save failed: ${e.message}`);
     }
   }
 
@@ -387,6 +388,88 @@ export async function updateEngagement(id: string, updates: Partial<EngagementRe
   };
 
   return await saveEngagement(merged);
+}
+
+export async function atomicTransitionEngagement(
+  id: string,
+  expectedCurrentStatus: string,
+  targetStatus: string,
+  extraUpdates?: Partial<EngagementRecord>
+): Promise<{ success: boolean; engagement?: EngagementRecord; error?: string }> {
+  const conn = await connectToDatabase();
+  const now = new Date().toISOString();
+
+  if (conn) {
+    try {
+      const updateDoc: any = {
+        $set: {
+          status: targetStatus,
+          updatedAt: new Date(now),
+          ...(extraUpdates || {}),
+        }
+      };
+
+      const result = await EngagementModel.findOneAndUpdate(
+        { id, status: expectedCurrentStatus },
+        updateDoc,
+        { new: true }
+      ).lean();
+
+      if (!result) {
+        const currentDoc = await EngagementModel.findOne({ id }).lean();
+        if (!currentDoc) {
+          // If not in MongoDB, check memory
+          const mem = engagementsMemory.get(id);
+          if (mem && mem.status === expectedCurrentStatus) {
+            const updatedMem: EngagementRecord = {
+              ...mem,
+              status: targetStatus as any,
+              ...(extraUpdates || {}),
+              updatedAt: now,
+            };
+            engagementsMemory.set(id, updatedMem);
+            await saveEngagement(updatedMem);
+            return { success: true, engagement: updatedMem };
+          }
+          return { success: false, error: `Engagement "${id}" not found in database.` };
+        }
+        return {
+          success: false,
+          error: `Concurrency conflict: Engagement status is currently "${currentDoc.status}", expected "${expectedCurrentStatus}".`
+        };
+      }
+
+      const formatted: EngagementRecord = {
+        ...(result as any),
+        createdAt: (result as any).createdAt ? new Date((result as any).createdAt).toISOString() : now,
+        updatedAt: now,
+      };
+      engagementsMemory.set(id, formatted);
+      return { success: true, engagement: formatted };
+    } catch (dbErr: any) {
+      console.error('MongoDB atomic transition error:', dbErr);
+      throw new Error(`Database atomic transition failed: ${dbErr.message}`);
+    }
+  }
+
+  // In-memory fallback
+  const mem = engagementsMemory.get(id);
+  if (!mem) return { success: false, error: `Engagement "${id}" not found.` };
+  if (mem.status !== expectedCurrentStatus) {
+    return {
+      success: false,
+      error: `Concurrency conflict: In-memory status is "${mem.status}", expected "${expectedCurrentStatus}".`
+    };
+  }
+
+  const updatedMem: EngagementRecord = {
+    ...mem,
+    status: targetStatus as any,
+    ...(extraUpdates || {}),
+    updatedAt: now,
+  };
+  engagementsMemory.set(id, updatedMem);
+  return { success: true, engagement: updatedMem };
 }
 
 // ============================================================================

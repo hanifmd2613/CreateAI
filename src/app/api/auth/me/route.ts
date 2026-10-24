@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionUserId, getUserById } from '@/lib/userStore';
+import { getSessionUserId, getUserByIdAsync } from '@/lib/userStore';
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    const user = getUserById(userId);
+    const user = await getUserByIdAsync(userId);
     if (!user) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }

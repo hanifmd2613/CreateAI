@@ -188,7 +188,15 @@ export function validateEngagementTransition(
     };
   }
 
-  // Idempotent: same state is allowed
+  // Creator decision authority guard
+  if ((targetState === 'CREATOR_ACCEPTED' || targetState === 'CREATOR_DECLINED') && actorRole !== 'creator') {
+    return {
+      allowed: false,
+      error: `Unauthorized: Only the creator role can transition to "${targetState}".`
+    };
+  }
+
+  // Idempotent: same state is allowed for authorized actors
   if (current === targetState) {
     return { allowed: true };
   }

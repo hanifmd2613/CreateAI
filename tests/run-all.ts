@@ -7,6 +7,8 @@ import { runAuthUnitTests } from './unit/auth.test';
 import { runRoleGuardUnitTests } from './unit/roleGuard.test';
 import { runCommissionWorkflowTests } from './unit/commissionWorkflow.test';
 import { runAcceptanceTests } from './integration/acceptance.test';
+import { runUniversalBriefMatchingTests } from './unit/universalBriefMatching.test';
+import { runBackendReliabilityTests } from './unit/backendReliability.test';
 
 async function main() {
   console.log('================================================================');
@@ -141,6 +143,28 @@ async function main() {
       failedTests++;
       console.error(`  ❌ [FAIL] ${r.id}: ${r.name} — ${r.details}`);
     }
+  }
+
+  // 10. Universal Brief-Matching & Unseen Natural Language Brief Matrix (Phase 9)
+  try {
+    await runUniversalBriefMatchingTests();
+    totalTests += 10;
+    passedTests += 10;
+  } catch (err: any) {
+    totalTests += 10;
+    failedTests++;
+    console.error(`  ❌ [FAIL] Universal Brief Matching Matrix: ${err.message}`);
+  }
+
+  // 11. Backend Reliability, Concurrency & Persistence Tests (Phase 2 & 3)
+  try {
+    await runBackendReliabilityTests();
+    totalTests += 4;
+    passedTests += 4;
+  } catch (err: any) {
+    totalTests += 4;
+    failedTests++;
+    console.error(`  ❌ [FAIL] Backend Reliability: ${err.message}`);
   }
 
   console.log('\n================================================================');

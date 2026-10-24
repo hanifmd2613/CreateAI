@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getEngagementById, updateEngagement, recordAudit } from '@/lib/engagementStore';
+import { getEngagementById, updateEngagement, atomicTransitionEngagement, recordAudit } from '@/lib/engagementStore';
 import { validateEngagementTransition } from '@/lib/stateMachine';
 import { EngagementStatus, UserRole } from '@/types';
 
@@ -74,19 +74,32 @@ export async function POST(
       }, { status: 409 });
     }
 
-    const updates: Partial<typeof engagement> = {
-      status: targetState,
-    };
-
+    const extraUpdates: any = {};
     if (body.declineReason) {
-      updates.declineReason = body.declineReason;
+      extraUpdates.declineReason = body.declineReason;
     }
-
     if (targetState === 'REVISION_REQUESTED') {
-      updates.revisionsUsed = (engagement.revisionsUsed || 0) + 1;
+      extraUpdates.revisionsUsed = (engagement.revisionsUsed || 0) + 1;
     }
 
-    const updated = await updateEngagement(id, updates);
+    const transitionResult = await atomicTransitionEngagement(
+      id,
+      engagement.status,
+      targetState,
+      extraUpdates
+    );
+
+    if (!transitionResult.success || !transitionResult.engagement) {
+      return NextResponse.json({
+        success: false,
+        error: {
+          code: 'PERSISTENCE_CONFLICT',
+          message: transitionResult.error || 'Failed to atomically update engagement in persistent storage.'
+        }
+      }, { status: 409 });
+    }
+
+    const updated = transitionResult.engagement;
 
     await recordAudit(
       `TRANSITION_TO_${targetState}`,

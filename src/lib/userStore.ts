@@ -309,7 +309,7 @@ export async function loginUser(
   return { success: true, user: userAccount, token };
 }
 
-// Find user by ID
+// Find user by ID (synchronous from memory)
 export function getUserById(id: string): UserAccount | undefined {
   const usersList = Array.from(memoryUsers.values());
   for (const stored of usersList) {
@@ -331,5 +331,59 @@ export function getUserById(id: string): UserAccount | undefined {
       };
     }
   }
+  return undefined;
+}
+
+// Find user by ID asynchronously with MongoDB query fallback
+export async function getUserByIdAsync(id: string): Promise<UserAccount | undefined> {
+  const cached = getUserById(id);
+  if (cached) return cached;
+
+  try {
+    const isConnected = await connectToDatabase();
+    if (isConnected) {
+      const dbUser = await UserModel.findOne({ id }).lean();
+      if (dbUser) {
+        const stored: StoredUser = {
+          id: dbUser.id,
+          name: dbUser.name,
+          email: dbUser.email,
+          passwordHash: dbUser.passwordHash,
+          salt: dbUser.salt,
+          role: dbUser.role as UserRole,
+          avatar: dbUser.avatar,
+          handle: dbUser.handle,
+          companyName: dbUser.companyName,
+          specialization: dbUser.specialization,
+          location: dbUser.location,
+          tools: dbUser.tools,
+          hourlyRate: dbUser.hourlyRate,
+          bio: dbUser.bio,
+          isVerified: dbUser.isVerified,
+          createdAt: dbUser.createdAt ? new Date(dbUser.createdAt).toISOString() : new Date().toISOString(),
+          updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt).toISOString() : new Date().toISOString(),
+        };
+        memoryUsers.set(stored.email, stored);
+        return {
+          id: stored.id,
+          name: stored.name,
+          email: stored.email,
+          role: stored.role,
+          avatar: stored.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(stored.name)}`,
+          handle: stored.handle || `@${stored.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+          companyName: stored.companyName,
+          specialization: stored.specialization,
+          location: stored.location,
+          tools: stored.tools,
+          hourlyRate: stored.hourlyRate,
+          bio: stored.bio,
+          isVerified: stored.isVerified,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('MongoDB getUserByIdAsync fallback warning:', err);
+  }
+
   return undefined;
 }
