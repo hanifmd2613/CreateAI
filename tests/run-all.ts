@@ -1,3 +1,15 @@
+import fs from 'fs';
+import path from 'path';
+
+// Load .env variables for testing suite
+if (typeof (process as any).loadEnvFile === 'function') {
+  try {
+    (process as any).loadEnvFile(path.resolve(process.cwd(), '.env'));
+  } catch (e) {
+    // ignore
+  }
+}
+
 import { runMatchingUnitTests } from './unit/matching.test';
 import { runLicensingUnitTests } from './unit/licensing.test';
 import { runStateMachineUnitTests } from './unit/stateMachine.test';

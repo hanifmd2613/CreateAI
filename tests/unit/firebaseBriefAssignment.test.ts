@@ -1,5 +1,5 @@
 import { firebaseApp, firebaseAuth, firebaseStorage, firestore, isFirebaseConfigured, getFirebaseConfig } from '../../src/lib/firebase/client';
-import { registerUser, findUserByEmail, findUserById } from '../../src/lib/userStore';
+import { registerUser } from '../../src/lib/userStore';
 import { connectToDatabase } from '../../src/lib/mongodb';
 import { BriefModel } from '../../src/lib/models/Brief';
 import { CreatorModel } from '../../src/lib/models/Creator';
@@ -51,7 +51,7 @@ export async function runFirebaseBriefAssignmentTests(): Promise<{ tests: TestRe
   try {
     await connectToDatabase();
 
-    const registeredUser = await registerUser({
+    const registeredResult = await registerUser({
       name: testCreatorName,
       email: testCreatorEmail,
       password: 'SecurePassword123!',
@@ -63,7 +63,8 @@ export async function runFirebaseBriefAssignmentTests(): Promise<{ tests: TestRe
     const creatorInDb = await CreatorModel.findOne({ id: testFirebaseUid });
 
     const pass = (
-      registeredUser.id === testFirebaseUid &&
+      registeredResult.success === true &&
+      registeredResult.user?.id === testFirebaseUid &&
       userInDb !== null &&
       userInDb.id === testFirebaseUid &&
       creatorInDb !== null &&

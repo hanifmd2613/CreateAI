@@ -3,7 +3,7 @@ import { getAuth, Auth } from "firebase/auth";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 import { getFirestore, Firestore } from "firebase/firestore";
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'demo-api-key',
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'createai-marketplace.firebaseapp.com',
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'createai-marketplace',
@@ -12,7 +12,9 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:641105637557:web:e4b44134a934b1760d0efc',
 };
 
-export const isFirebaseConfigured = Boolean(
+export const getFirebaseConfig = () => firebaseConfig;
+
+export const isFirebaseConfigured = (): boolean => Boolean(
   process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
   process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'demo-api-key' &&
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
