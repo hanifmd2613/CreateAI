@@ -18,16 +18,27 @@ export interface PortfolioItem {
   workflowDescription?: string;
   workflow?: string;
   contentType?: string;
+  category?: string;
   style?: string;
+  targetAudience?: string;
   aspectRatio: string;
   duration?: string;
+  language?: string;
+  skills?: string[];
+  projectRole?: string;
   client?: string;
+  projectDate?: string;
   promptSnippet?: string;
   commercialUse?: string;
   verificationStatus?: 'Verified' | 'Pending' | 'Self-Reported';
   steps?: WorkflowStep[];
   views?: string;
   likes?: number;
+  featured?: boolean;
+  visibility?: 'public' | 'private';
+  order?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CreatorReview {
@@ -57,19 +68,27 @@ export interface Creator {
   id: string;
   name: string;
   handle: string;
+  headline?: string;
   avatar: string;
   coverImage?: string;
   specialization: string;
+  categories?: string[];
   bio: string;
   location: string;
+  languages?: string[];
   skills: string[];
   tools: string[];
   models?: string[];
   contentTypes?: string[];
   styles?: string[];
   experience?: string;
+  yearsOfExperience?: string;
+  preferredProjectTypes?: string[];
   hourlyRate: number;
   projectRate?: number;
+  pricingModel?: string;
+  productionWorkflows?: string[];
+  contactEmail?: string;
   availability?: boolean;
   isVerified: boolean;
   verification?: VerificationSignals;
@@ -85,6 +104,7 @@ export interface Creator {
   isUserCreated?: boolean;
   gender?: 'male' | 'female';
   licensingTerms?: CreatorLicensingTerms;
+  completeness?: number;
 }
 
 export interface ChatMessage {
@@ -144,7 +164,7 @@ export interface UserAccount {
   geminiApiKey?: string;
 }
 
-export type PageView = 'discovery' | 'profile' | 'brief-builder' | 'briefs-feed' | 'creator-studio' | 'workspace';
+export type PageView = 'discovery' | 'profile' | 'brief-builder' | 'briefs-feed' | 'creator-studio' | 'workspace' | 'creator-profile';
 
 // ============================================================================
 // ROUND 2: LICENSING & COMMERCIAL USE SPECIFICATIONS

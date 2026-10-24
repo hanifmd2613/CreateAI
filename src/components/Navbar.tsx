@@ -146,6 +146,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Round 2
                 </span>
               </button>
+
+              {currentUser?.role === 'creator' && (
+                <button
+                  onClick={() => onNavigate('creator-profile')}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    currentView === 'creator-profile'
+                      ? 'text-white bg-zinc-800/90'
+                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>My Profile & Portfolio</span>
+                </button>
+              )}
             </nav>
           </div>
 
@@ -267,6 +281,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
 
                     <div className="py-1">
+                      {currentUser?.role === 'creator' && (
+                        <button 
+                          onClick={() => {
+                            onNavigate('creator-profile');
+                            setProfileOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-3.5 py-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-zinc-800 text-left font-medium"
+                        >
+                          <User className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>My Profile & Portfolio Studio</span>
+                        </button>
+                      )}
+
                       <button 
                         onClick={() => {
                           onOpenAuthModal();

@@ -12,15 +12,24 @@ export interface IPortfolioItem {
   workflowDescription?: string;
   workflow?: string;
   contentType?: string;
+  category?: string;
   style?: string;
+  targetAudience?: string;
   aspectRatio: string;
   duration?: string;
+  language?: string;
+  skills?: string[];
+  projectRole?: string;
   client?: string;
+  projectDate?: string;
   promptSnippet?: string;
   commercialUse?: string;
   verificationStatus?: 'Verified' | 'Pending' | 'Self-Reported';
   views?: string;
   likes?: number;
+  featured?: boolean;
+  visibility?: 'public' | 'private';
+  order?: number;
   steps?: {
     step: number;
     phase: string;
@@ -28,6 +37,7 @@ export interface IPortfolioItem {
     description: string;
   }[];
   createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface IVerificationSignals {
@@ -47,19 +57,27 @@ export interface ICreator extends Document {
   id: string;
   name: string;
   handle: string;
+  headline?: string;
   avatar: string;
   coverImage?: string;
   specialization: string;
+  categories?: string[];
   bio: string;
   location: string;
+  languages?: string[];
   skills: string[];
   tools: string[];
   models?: string[];
   contentTypes?: string[];
   styles?: string[];
   experience?: string;
+  yearsOfExperience?: string;
+  preferredProjectTypes?: string[];
   hourlyRate: number;
   projectRate?: number;
+  pricingModel?: string;
+  productionWorkflows?: string[];
+  contactEmail?: string;
   availability?: boolean;
   availableNow?: boolean;
   avgTurnaround?: string;
@@ -99,41 +117,59 @@ const PortfolioItemSchema = new Schema<IPortfolioItem>({
   workflowDescription: { type: String },
   workflow: { type: String },
   contentType: { type: String },
+  category: { type: String },
   style: { type: String },
+  targetAudience: { type: String },
   aspectRatio: { type: String, required: true, default: '16:9' },
   duration: { type: String },
+  language: { type: String },
+  skills: [{ type: String }],
+  projectRole: { type: String },
   client: { type: String },
+  projectDate: { type: String },
   promptSnippet: { type: String },
   commercialUse: { type: String, default: 'Full Buyout' },
   verificationStatus: { type: String, default: 'Verified' },
   views: { type: String },
   likes: { type: Number, default: 0 },
+  featured: { type: Boolean, default: false },
+  visibility: { type: String, enum: ['public', 'private'], default: 'public' },
+  order: { type: Number, default: 0 },
   steps: [{
     step: Number,
     phase: String,
     tool: String,
     description: String,
   }],
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 });
 
 const CreatorSchema = new Schema<ICreator>({
   id: { type: String, required: true, unique: true, index: true },
   name: { type: String, required: true, index: true },
   handle: { type: String, required: true },
+  headline: { type: String },
   avatar: { type: String, required: true },
   coverImage: { type: String },
   specialization: { type: String, required: true, index: true },
+  categories: [{ type: String }],
   bio: { type: String, required: true },
   location: { type: String, required: true, index: true },
+  languages: [{ type: String, index: true }],
   skills: [{ type: String, index: true }],
   tools: [{ type: String, index: true }],
   models: [{ type: String }],
   contentTypes: [{ type: String }],
   styles: [{ type: String }],
   experience: { type: String, default: '3+ Years Gen-AI Directing' },
+  yearsOfExperience: { type: String },
+  preferredProjectTypes: [{ type: String }],
   hourlyRate: { type: Number, required: true, index: true },
   projectRate: { type: Number },
+  pricingModel: { type: String, default: 'Hourly / Project' },
+  productionWorkflows: [{ type: String }],
+  contactEmail: { type: String },
   availability: { type: Boolean, default: true },
   availableNow: { type: Boolean, default: true },
   avgTurnaround: { type: String, default: '48 Hours' },

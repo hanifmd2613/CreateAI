@@ -273,9 +273,12 @@ export function buildCreatorSearchDocument(creator: Creator): string {
   const parts: string[] = [
     creator.name,
     creator.handle,
+    creator.headline || '',
     creator.specialization,
     creator.bio,
     creator.location,
+    ...(creator.languages || []),
+    ...(creator.categories || []),
     ...(creator.skills || []),
     ...(creator.tools || []),
     ...(creator.verification?.certifiedPipeline ? [creator.verification.certifiedPipeline] : []),
@@ -283,12 +286,20 @@ export function buildCreatorSearchDocument(creator: Creator): string {
 
   if (creator.portfolio) {
     for (const item of creator.portfolio) {
+      if (item.visibility === 'private') continue; // Do not index private items for public matching
       parts.push(item.title);
       if (item.workflowDescription) parts.push(item.workflowDescription);
       if (item.specificModel) parts.push(item.specificModel);
-      if (item.promptSnippet) parts.push(item.promptSnippet);
+      if (item.category) parts.push(item.category);
+      if (item.contentType) parts.push(item.contentType);
+      if (item.style) parts.push(item.style);
+      if (item.targetAudience) parts.push(item.targetAudience);
+      if (item.language) parts.push(item.language);
       if (item.client) parts.push(item.client);
       if (item.aspectRatio) parts.push(item.aspectRatio);
+      if (item.promptSnippet) parts.push(item.promptSnippet);
+      if (Array.isArray(item.tools)) parts.push(...item.tools);
+      if (Array.isArray(item.skills)) parts.push(...item.skills);
     }
   }
 
@@ -440,9 +451,27 @@ export function matchCreatorToUniversalBrief(
   // =========================================================================
   let portfolioEvidenceScore = 40;
   for (const item of creator.portfolio) {
+    if (item.visibility === 'private') continue; // Private assets never exposed as public matching evidence
+
     let relevance = 0;
     if (criteria.aspectRatio && item.aspectRatio === criteria.aspectRatio) relevance++;
-    if (criteria.industry && (item.title.toLowerCase().includes(criteria.industry) || (item.workflowDescription || '').toLowerCase().includes(criteria.industry))) relevance += 2;
+
+    const itemText = `${item.title} ${item.workflowDescription || ''} ${item.category || ''} ${item.style || ''} ${item.contentType || ''} ${item.targetAudience || ''}`.toLowerCase();
+
+    if (criteria.industry) {
+      const indKeywords = INDUSTRY_KEYWORDS[criteria.industry.toLowerCase()] || [criteria.industry.toLowerCase()];
+      const matchesIndustry = indKeywords.some(kw => itemText.includes(kw));
+      if (matchesIndustry) relevance += 2;
+    }
+
+    if (criteria.visualStyle && (item.style || '').toLowerCase().includes(criteria.visualStyle.toLowerCase())) relevance++;
+    if (criteria.tools.length > 0) {
+      const hasItemTool = criteria.tools.some(t => 
+        (item.tools || []).some(it => it.toLowerCase() === t.toLowerCase()) || 
+        (item.specificModel || '').toLowerCase().includes(t.toLowerCase())
+      );
+      if (hasItemTool) relevance++;
+    }
     if (item.steps && item.steps.length > 0) relevance++;
     if (item.promptSnippet) relevance++;
 
@@ -450,7 +479,7 @@ export function matchCreatorToUniversalBrief(
       matchedPortfolioIds.push(item.id);
       citations.push({
         category: 'portfolio',
-        text: `Portfolio item "${item.title}" (${item.aspectRatio}, ${item.specificModel || 'Gen-AI'}) directly demonstrates relevant workflow.`,
+        text: `Portfolio item "${item.title}" (${item.aspectRatio}, ${item.specificModel || item.category || 'Gen-AI'}) directly demonstrates relevant workflow.`,
         referenceId: item.id
       });
     }

@@ -9,6 +9,8 @@ import { runCommissionWorkflowTests } from './unit/commissionWorkflow.test';
 import { runAcceptanceTests } from './integration/acceptance.test';
 import { runUniversalBriefMatchingTests } from './unit/universalBriefMatching.test';
 import { runBackendReliabilityTests } from './unit/backendReliability.test';
+import { runCreatorProfilePortfolioTests } from './unit/creatorProfilePortfolio.test';
+import { runMLIntelligenceTests } from './unit/mlIntelligence.test';
 
 async function main() {
   console.log('================================================================');
@@ -165,6 +167,46 @@ async function main() {
     totalTests += 4;
     failedTests++;
     console.error(`  ❌ [FAIL] Backend Reliability: ${err.message}`);
+  }
+
+  // 12. Creator Profile & Portfolio System Unit Tests
+  console.log('\n--- 12. CREATOR PROFILE & PORTFOLIO PERSISTENCE TESTS ---');
+  try {
+    const profileRes = await runCreatorProfilePortfolioTests();
+    for (const t of profileRes.tests) {
+      totalTests++;
+      if (t.pass) {
+        passedTests++;
+        console.log(`  ✅ [PASS] ${t.name}`);
+      } else {
+        failedTests++;
+        console.error(`  ❌ [FAIL] ${t.name}: ${t.details}`);
+      }
+    }
+  } catch (err: any) {
+    totalTests++;
+    failedTests++;
+    console.error(`  ❌ [FAIL] Creator Profile & Portfolio Tests: ${err.message}`);
+  }
+
+  // 13. ML Intelligence, Hybrid Embeddings & Outcome Calibration Tests
+  console.log('\n--- 13. ML INTELLIGENCE & HYBRID PIPELINE TESTS ---');
+  try {
+    const mlRes = await runMLIntelligenceTests();
+    for (const t of mlRes.tests) {
+      totalTests++;
+      if (t.pass) {
+        passedTests++;
+        console.log(`  ✅ [PASS] ${t.name}`);
+      } else {
+        failedTests++;
+        console.error(`  ❌ [FAIL] ${t.name}: ${t.details}`);
+      }
+    }
+  } catch (err: any) {
+    totalTests++;
+    failedTests++;
+    console.error(`  ❌ [FAIL] ML Intelligence Suite: ${err.message}`);
   }
 
   console.log('\n================================================================');

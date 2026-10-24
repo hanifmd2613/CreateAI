@@ -4,6 +4,8 @@ import { BriefModel } from '../../../lib/models/Brief';
 import { CreatorModel } from '../../../lib/models/Creator';
 import { evaluateBriefMatchingRun } from '../../../lib/matching';
 import { executeUniversalBriefMatching } from '../../../lib/universalMatching';
+import { executeHybridMLMatching } from '../../../lib/ml/rankingAdapter';
+import { trackMarketplaceEvent } from '../../../lib/ml/eventTracking';
 import { INITIAL_BRIEFS, MOCK_CREATORS } from '../../../data/mockData';
 import { Brief, Creator } from '../../../types';
 
@@ -35,19 +37,90 @@ export async function POST(req: NextRequest) {
 
     // 2. If raw natural language brief is provided
     if (rawSearchText && typeof rawSearchText === 'string' && rawSearchText.trim().length > 0) {
-      const universalRun = executeUniversalBriefMatching(rawSearchText.trim(), creatorsList);
+      // Record search telemetry
+      trackMarketplaceEvent({
+        eventType: 'SEARCH_SUBMITTED',
+        briefId: body.briefId,
+        brandId: body.brandId,
+        metadata: { query: rawSearchText, mode: body.mode || 'hybrid_ml' }
+      }).catch(() => {});
+
+      if (body.mode === 'baseline') {
+        const universalRun = executeUniversalBriefMatching(rawSearchText.trim(), creatorsList);
+        return NextResponse.json({
+          success: true,
+          mode: 'baseline_6factor',
+          query: universalRun.query,
+          extractedCriteria: universalRun.extractedCriteria,
+          totalCreatorsEvaluated: universalRun.totalEvaluated,
+          hasStrongMatch: universalRun.hasStrongMatch,
+          status: universalRun.status,
+          statusExplanation: universalRun.statusExplanation,
+          relaxationSuggestions: universalRun.relaxationSuggestions,
+          matches: universalRun.matches.map(m => ({
+            creatorId: m.creatorId,
+            creator: {
+              id: m.creator.id,
+              name: m.creator.name,
+              avatar: m.creator.avatar,
+              handle: m.creator.handle,
+              specialization: m.creator.specialization,
+              tools: m.creator.tools,
+              skills: m.creator.skills,
+              hourlyRate: m.creator.hourlyRate,
+              rating: m.creator.rating,
+              completedProjects: m.creator.completedProjects,
+              isVerified: m.creator.isVerified,
+              verification: m.creator.verification,
+              portfolio: m.creator.portfolio.slice(0, 2),
+            },
+            rank: m.rank,
+            finalScore: m.finalScore,
+            factors: m.factorScores,
+            reasons: m.reasons,
+            positiveEvidence: m.positiveEvidence,
+            missingMatches: m.missingMatches,
+            conflicts: m.conflicts,
+            matchedTools: m.matchedTools,
+            matchedSkills: m.matchedSkills,
+            matchedPortfolioIds: m.matchedPortfolioIds,
+            licensingStatus: m.licensingStatus,
+            licensingSummary: m.licensingSummary,
+            citations: m.citations,
+            budgetCompatible: m.budgetCompatible,
+            languageCompatible: m.languageCompatible,
+          })),
+        });
+      }
+
+      // Default: Hybrid ML Ranking Pipeline
+      const hybridRun = await executeHybridMLMatching(rawSearchText.trim(), creatorsList, {
+        brandContext: body.brandContext,
+        enableDiversity: body.enableDiversity !== false
+      });
+
+      // Track top impressions
+      hybridRun.matches.slice(0, 3).forEach(m => {
+        trackMarketplaceEvent({
+          eventType: 'RESULT_IMPRESSION',
+          creatorId: m.creatorId,
+          position: m.rank,
+          rankingScore: m.finalScore,
+          modelVersion: m.rankingEngineVersion
+        }).catch(() => {});
+      });
 
       return NextResponse.json({
         success: true,
-        mode: 'universal_natural_language',
-        query: universalRun.query,
-        extractedCriteria: universalRun.extractedCriteria,
-        totalCreatorsEvaluated: universalRun.totalEvaluated,
-        hasStrongMatch: universalRun.hasStrongMatch,
-        status: universalRun.status,
-        statusExplanation: universalRun.statusExplanation,
-        relaxationSuggestions: universalRun.relaxationSuggestions,
-        matches: universalRun.matches.map(m => ({
+        mode: 'hybrid_ml_ranking',
+        rankingEngineVersion: hybridRun.rankingEngineVersion,
+        query: hybridRun.query,
+        totalCreatorsEvaluated: hybridRun.totalEvaluated,
+        hasStrongMatch: hybridRun.hasStrongMatch,
+        status: hybridRun.status,
+        statusExplanation: hybridRun.statusExplanation,
+        relaxationSuggestions: hybridRun.relaxationSuggestions,
+        matches: hybridRun.matches.map(m => ({
           creatorId: m.creatorId,
           creator: {
             id: m.creator.id,
@@ -95,6 +168,11 @@ export async function POST(req: NextRequest) {
           citations: m.citations,
           budgetCompatible: m.budgetCompatible,
           languageCompatible: m.languageCompatible,
+          mlFeatures: m.mlFeatures,
+          personalizationBoost: m.personalizationBoost,
+          personalizationReasons: m.personalizationReasons,
+          isColdStartExploration: m.isColdStartExploration,
+          rankingEngineVersion: m.rankingEngineVersion,
         })),
       });
     }

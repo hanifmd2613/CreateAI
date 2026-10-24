@@ -16,6 +16,7 @@ import { SystemAssistantModal } from '../components/SystemAssistantModal';
 import { ApiConfigModal } from '../components/ApiConfigModal';
 import { ExplainableMatchModal } from '../components/ExplainableMatchModal';
 import { EngagementWorkspace } from '../components/EngagementWorkspace';
+import { CreatorProfileEditor } from '../components/CreatorProfileEditor';
 import { FadeInSection } from '../components/FadeInSection';
 import { LandingPage } from '../components/LandingPage';
 import { 
@@ -999,6 +1000,25 @@ export default function Home() {
             <EngagementWorkspace
               currentUser={currentUser}
               onBack={() => setCurrentView('discovery')}
+            />
+          </FadeInSection>
+        )}
+
+        {/* VIEW 6: CREATOR PROFILE & PORTFOLIO STUDIO */}
+        {currentView === 'creator-profile' && currentUser && (
+          <FadeInSection delayMs={20} className="w-full">
+            <CreatorProfileEditor
+              currentUser={currentUser}
+              onBack={() => setCurrentView('discovery')}
+              onPreviewPublicProfile={(creatorId) => {
+                const found = creators.find(c => c.id === creatorId);
+                if (found) {
+                  setSelectedCreator(found);
+                  setCurrentView('profile');
+                } else {
+                  window.open(`/creators/${creatorId}`, '_blank');
+                }
+              }}
             />
           </FadeInSection>
         )}

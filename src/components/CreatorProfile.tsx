@@ -357,51 +357,87 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
 
       {/* Tab Content 1: Portfolio Grid */}
       {activeTab === 'portfolio' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredPortfolio.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => onSelectPortfolioItem(creator, item)}
-              onMouseMove={handleCardMouseMove}
-              className="bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/30 overflow-hidden transition-all cursor-pointer flex flex-col section-glow relative"
-            >
-              <div className="relative aspect-video w-full overflow-hidden bg-zinc-950">
-                <img
-                  src={item.thumbnail}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                />
-
-                <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-black/80 text-zinc-300 border border-zinc-800">
-                    {item.type}
-                  </span>
-                  {item.aspectRatio && (
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-black/80 text-zinc-400 border border-zinc-800">
-                      {item.aspectRatio}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <h3 className="font-semibold text-white text-sm">
-                    {item.title}
-                  </h3>
-                  <p className="text-xs text-zinc-400 mt-1 line-clamp-1 font-mono">
-                    {item.specificModel}
-                  </p>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
-                  <span>Client: {item.client || 'Featured'}</span>
-                  <span className="text-zinc-300 font-medium hover:underline">Inspect</span>
-                </div>
-              </div>
+        <>
+          {filteredPortfolio.length === 0 ? (
+            <div className="bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/10 p-12 text-center space-y-2">
+              <Film className="w-8 h-8 text-zinc-500 mx-auto" />
+              <h4 className="text-sm font-semibold text-white">No Portfolio Projects Found</h4>
+              <p className="text-xs text-zinc-400">
+                {filterType === 'all' 
+                  ? `${creator.name} has not published public portfolio assets yet.` 
+                  : `No ${filterType} assets found in portfolio.`}
+              </p>
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredPortfolio.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => onSelectPortfolioItem(creator, item)}
+                  onMouseMove={handleCardMouseMove}
+                  className="bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/30 overflow-hidden transition-all cursor-pointer flex flex-col section-glow relative group"
+                >
+                  <div className="relative aspect-video w-full overflow-hidden bg-zinc-950">
+                    <img
+                      src={item.thumbnail || item.mediaUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+
+                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+                      <div className="flex items-center gap-1">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-black/80 text-zinc-300 border border-zinc-800">
+                          {item.type}
+                        </span>
+                        {item.featured && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/90 text-zinc-950 border border-amber-400">
+                            ★ Featured
+                          </span>
+                        )}
+                      </div>
+                      {item.aspectRatio && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-black/80 text-zinc-300 border border-zinc-800">
+                          {item.aspectRatio}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+                      {item.category && (
+                        <span className="text-[10px] font-medium text-emerald-400 drop-shadow bg-black/60 px-1.5 py-0.5 rounded">
+                          {item.category}
+                        </span>
+                      )}
+                      {item.duration && (
+                        <span className="text-[10px] font-mono text-zinc-300 drop-shadow bg-black/60 px-1.5 py-0.5 rounded">
+                          {item.duration}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-semibold text-white text-sm line-clamp-1 group-hover:text-emerald-300 transition-colors">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-relaxed">
+                        {item.workflowDescription || item.specificModel || 'Verified AI production asset.'}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
+                      <span>{item.client ? `Client: ${item.client}` : (item.language || 'Commercial')}</span>
+                      <span className="text-zinc-300 font-medium group-hover:underline flex items-center gap-1">
+                        Inspect
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Tab Content 2: Verified AI Workflows */}
