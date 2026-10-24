@@ -1,18 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Brief } from '../types';
+import { Brief, UserAccount } from '../types';
 import { 
   Briefcase, 
   Sparkles, 
   Clock, 
   ShieldCheck, 
   ArrowRight,
-  Filter
+  Filter,
+  UserCheck,
+  Lock
 } from 'lucide-react';
 
 interface BriefsFeedProps {
   briefs: Brief[];
+  currentUser?: UserAccount | null;
   onNavigateToBuilder: () => void;
   onExploreMatchingCreators: (tools: string[]) => void;
   onOpenExplainableMatch?: (brief: Brief) => void;
@@ -20,14 +23,33 @@ interface BriefsFeedProps {
 
 export const BriefsFeed: React.FC<BriefsFeedProps> = ({
   briefs,
+  currentUser,
   onNavigateToBuilder,
   onExploreMatchingCreators,
   onOpenExplainableMatch,
 }) => {
   const [filterType, setFilterType] = useState('all');
   const [filterRights, setFilterRights] = useState('all');
+  const [scopeTab, setScopeTab] = useState<'all' | 'assigned' | 'mine'>('all');
 
   const filteredBriefs = briefs.filter((b) => {
+    // Privacy guard: private briefs are only visible to the assigned creator or author brand
+    if (b.visibility === 'private') {
+      const isAssigned = currentUser && (b.assignedCreatorId === currentUser.id || b.assignedCreatorName?.toLowerCase() === currentUser.name?.toLowerCase());
+      const isBrandAuthor = currentUser && (b.brandId === currentUser.id || b.brandName?.toLowerCase() === currentUser.name?.toLowerCase() || b.brandName?.toLowerCase() === currentUser.companyName?.toLowerCase());
+      if (!isAssigned && !isBrandAuthor) {
+        return false;
+      }
+    }
+
+    if (scopeTab === 'assigned') {
+      const isAssigned = currentUser && (b.assignedCreatorId === currentUser.id || b.assignedCreatorName?.toLowerCase() === currentUser.name?.toLowerCase());
+      if (!isAssigned) return false;
+    } else if (scopeTab === 'mine') {
+      const isBrandAuthor = currentUser && (b.brandId === currentUser.id || b.brandName?.toLowerCase() === currentUser.name?.toLowerCase() || b.brandName?.toLowerCase() === currentUser.companyName?.toLowerCase());
+      if (!isBrandAuthor) return false;
+    }
+
     if (filterType !== 'all' && !b.contentType.toLowerCase().includes(filterType.toLowerCase())) {
       return false;
     }
