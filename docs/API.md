@@ -335,3 +335,85 @@ Accepts, edits, or rejects an agent shortlist proposal.
 System liveness and readiness probe endpoints.
 - **Auth**: Public
 - **Response**: `200 OK` with status and database connectivity indicator.
+
+---
+
+## 8. Workplace & ML Intelligence APIs
+
+### `GET /api/workplace/actions`
+Authoritative endpoint returning genuine pending actions for the authenticated user based on persisted engagement state machine rules.
+- **Auth**: Authenticated User (Cookie, Bearer token, or `x-user-id`)
+- **Query Parameters**:
+  - `userId` (optional fallback for automated tests)
+  - `role` (optional fallback for automated tests: `creator` | `brand`)
+- **Response**: `200 OK`
+  ```json
+  {
+    "success": true,
+    "count": 1,
+    "userId": "creator-1",
+    "role": "creator",
+    "actions": [
+      {
+        "id": "act-eng-1-REVIEW_PROPOSAL",
+        "engagementId": "eng-1",
+        "projectTitle": "NovaPhone 15s Launch Spot",
+        "counterpartyId": "brand-1",
+        "counterpartyName": "Kaveri Studios",
+        "counterpartyRole": "brand",
+        "engagementStatus": "CONTACTED",
+        "actionType": "REVIEW_PROPOSAL",
+        "actionTitle": "Commission Proposal Awaiting Your Decision",
+        "actionDescription": "Kaveri Studios sent a proposal for ₹5,20,000. Accept or decline to proceed.",
+        "deadline": "2026-11-01",
+        "budget": "₹5,20,000",
+        "urgency": "urgent",
+        "ctaLabel": "Review & Decide Proposal",
+        "authorizedRole": "creator",
+        "createdAt": "2026-10-24T12:00:00.000Z"
+      }
+    ],
+    "timestamp": "2026-10-24T12:00:00.000Z"
+  }
+  ```
+
+### `POST /api/ml/events`
+Tracks marketplace telemetry events with honest persistence status reporting.
+- **Auth**: Authenticated User or Internal Service
+- **Request Body**:
+  ```json
+  {
+    "eventType": "RESULT_IMPRESSION",
+    "creatorId": "creator-1",
+    "position": 1,
+    "rankingScore": 94
+  }
+  ```
+- **Response**: `200 OK`
+  ```json
+  {
+    "success": true,
+    "persistenceStatus": "durable | buffered_in_memory",
+    "eventId": "evt-123",
+    "bufferSize": 14
+  }
+  ```
+
+### `POST /api/ml/predict-outcome`
+Predicts campaign turnaround, delivery pass rate, and proposal acceptance using explicit calibration modes.
+- **Auth**: Public or Authenticated Brand
+- **Request Body**:
+  ```json
+  {
+    "creatorId": "creator-1",
+    "budget": 200000,
+    "deadlineDays": 7
+  }
+  ```
+- **Response**: `200 OK` with prediction mode (`INSUFFICIENT_HISTORICAL_DATA`, `HEURISTIC_ESTIMATE`, or `EMPIRICALLY_VALIDATED_PREDICTION`), sample count, and grounded evidence.
+
+### `GET /api/ml/evaluation`
+Executes the offline recommendation evaluation benchmark (`bench-eval-v2.2`) comparing baseline 6-factor vs. canonical hybrid ML ranking.
+- **Auth**: Public or Admin
+- **Response**: `200 OK` with NDCG@10, Recall@3, Precision@3, MRR, Latency, and valid/excluded query counts.
+

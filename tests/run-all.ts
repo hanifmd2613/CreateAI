@@ -11,6 +11,7 @@ import { runUniversalBriefMatchingTests } from './unit/universalBriefMatching.te
 import { runBackendReliabilityTests } from './unit/backendReliability.test';
 import { runCreatorProfilePortfolioTests } from './unit/creatorProfilePortfolio.test';
 import { runMLIntelligenceTests } from './unit/mlIntelligence.test';
+import { runWorkplaceActionsTests } from './unit/workplaceActions.test';
 
 async function main() {
   console.log('================================================================');
@@ -207,6 +208,26 @@ async function main() {
     totalTests++;
     failedTests++;
     console.error(`  ❌ [FAIL] ML Intelligence Suite: ${err.message}`);
+  }
+
+  // 14. Server-Authoritative Workplace Action Resolver Tests
+  console.log('\n--- 14. WORKPLACE ACTION RESOLVER & PARTICIPANT ISOLATION TESTS ---');
+  try {
+    const wpRes = await runWorkplaceActionsTests();
+    for (const t of wpRes.tests) {
+      totalTests++;
+      if (t.pass) {
+        passedTests++;
+        console.log(`  ✅ [PASS] ${t.name}`);
+      } else {
+        failedTests++;
+        console.error(`  ❌ [FAIL] ${t.name}: ${t.details}`);
+      }
+    }
+  } catch (err: any) {
+    totalTests++;
+    failedTests++;
+    console.error(`  ❌ [FAIL] Workplace Actions Suite: ${err.message}`);
   }
 
   console.log('\n================================================================');

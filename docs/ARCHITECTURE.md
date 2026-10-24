@@ -177,3 +177,57 @@ GenCraft uses a multi-provider AI architecture ([provider.ts](../src/lib/ai/prov
 1. **Primary Cloud Inference**: Groq (Llama-3.3 70B Versatile) for high-speed brief generation and analysis.
 2. **Secondary Cloud Inference**: Google Gemini 1.5 Flash as an automatic failover.
 3. **Deterministic Platform Engine (`gencraft-neural-engine`)**: Zero-network local fallback generating structured, grounded briefs and explanations if external API quotas expire or network connectivity is unavailable.
+
+---
+
+## 8. Server-Authoritative Workplace Action Resolver
+
+To prevent deceptive, out-of-context "Next Action Required" alerts, GenCraft centralizes all workplace action visibility into a server-authoritative resolver ([actionResolver.ts](../src/lib/actionResolver.ts)).
+
+### Action Resolution Architecture
+
+```mermaid
+flowchart TD
+    Req["Client GET /api/workplace/actions"] --> Auth["Server Auth Guard (serverAuth.ts)"]
+    Auth --> Extractor["Extract Authenticated userId & role"]
+    Extractor --> QueryEngagements["Query Persisted Engagements (by participant ID)"]
+    QueryEngagements --> FilterTerminals["Filter Terminal / Resolved States (COMPLETED, DECLINED, CANCELLED)"]
+    
+    FilterTerminals --> RoleSwitch{Authenticated Role?}
+    
+    RoleSwitch -- "creator" --> CreatorRules["Creator State Rules"]
+    RoleSwitch -- "brand" --> BrandRules["Brand State Rules"]
+    
+    CreatorRules --> C1["CONTACTED / CREATOR_RESPONDED -> REVIEW_PROPOSAL"]
+    CreatorRules --> C2["CREATOR_ACCEPTED / SCOPE_CONFIRMATION -> CONFIRM_AGREEMENT"]
+    CreatorRules --> C3["IN_PRODUCTION & no drafts -> SUBMIT_FIRST_DRAFT"]
+    CreatorRules --> C4["REVISION_REQUESTED -> SUBMIT_REVISION"]
+    
+    BrandRules --> B1["CREATOR_ACCEPTED / SCOPE_CONFIRMATION -> CONFIRM_AGREEMENT"]
+    BrandRules --> B2["DRAFT_SUBMITTED -> REVIEW_DRAFT"]
+    BrandRules --> B3["FINAL_REVIEW -> FINAL_APPROVAL"]
+    BrandRules --> B4["DELIVERY_APPROVED -> RELEASE_PAYMENT"]
+    
+    C1 --> DedupSort["Deduplicate & Sort by Urgency + Timestamp"]
+    C2 --> DedupSort
+    C3 --> DedupSort
+    C4 --> DedupSort
+    B1 --> DedupSort
+    B2 --> DedupSort
+    B3 --> DedupSort
+    B4 --> DedupSort
+    
+    DedupSort --> Response["JSON: { count, actions: WorkplaceActionItem[] }"]
+```
+
+### Action Eligibility Rules
+1. **Participant Assignment**: The record must genuinely list the authenticated user as the creator or brand participant. Unrelated creators cannot view requests.
+2. **Authoritative Role Responsibility**: The state machine assigns responsibility to either the creator or the brand. Brand actions (e.g., `REVIEW_DRAFT`, `RELEASE_PAYMENT`) never leak to creator queues; creator actions (e.g., `REVIEW_PROPOSAL`, `SUBMIT_FIRST_DRAFT`) never leak to brands.
+3. **Exclusion of Terminal & Superseded States**: States `COMPLETED`, `CREATOR_DECLINED`, `CANCELLED`, and `EXPIRED` strictly produce zero pending actions.
+4. **Immediate Post-Transition Invalidation**: When a creator accepts or declines a proposal, the action is purged immediately upon persistence, and the corresponding follow-up action (e.g., `CONFIRM_AGREEMENT`) is assigned to the brand.
+5. **Deterministic UI State Rendering**:
+   - **Loading**: Subdued skeleton placeholder (no banners).
+   - **Empty**: Calm verified banner ("You're all caught up. No pending actions.").
+   - **Actionable**: Rich cards displaying verified title, counterparty, real stored deadline, and direct action CTA.
+   - **Error**: Recoverable error state with manual retry button.
+

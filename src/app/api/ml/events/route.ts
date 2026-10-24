@@ -27,9 +27,13 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      success: true,
+      success: result.success,
       eventId: result.eventId,
-      message: 'Telemetry event persisted to training pipeline.'
+      persistenceStatus: result.persistenceStatus,
+      storageBackend: result.storageBackend,
+      message: result.persistenceStatus === 'durable'
+        ? 'Telemetry event persisted to durable MongoDB storage.'
+        : 'Telemetry event buffered in local process memory.',
     }, { status: 201 });
 
   } catch (err: any) {

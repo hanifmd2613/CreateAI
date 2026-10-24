@@ -18,28 +18,29 @@ This runs `npx tsx tests/run-all.ts`, executing all 13 test suites sequentially 
 
 ## 2. Verified Test Execution Results
 
-All 13 test suites pass cleanly with **zero failures**:
+All 14 test suites pass cleanly with **zero failures**:
 
 ```
 ================================================================
 MASTER TEST SUITE RUNNER — ALL MODULES
 ================================================================
---- 1. ROLE GUARD & AUTHENTICATION UNIT TESTS --- (3 passed)
---- 2. MATCHING SCORING & FACTOR CALCULATION TESTS --- (4 passed)
---- 3. ENGAGEMENT STATE MACHINE & EDGE CASE TESTS --- (6 passed)
---- 4. CAMPAIGN BRIEF AUTO-SHORTLIST PROPOSAL LIFECYCLE TESTS --- (4 passed)
---- 5. FEEDBACK STORAGE & MILESTONE AUDIT LOG TESTS --- (4 passed)
---- 6. AI INGESTION & BRIEF GENERATION TESTS --- (5 passed)
---- 7. DELIVERY CHECK ENGINE & MEDIA INSPECTION UNIT TESTS --- (4 passed)
+--- 1. 4-LAYER SEARCH & SEMANTIC DESCRIPTION MATCHING TESTS --- (6 passed)
+--- 2. EMAIL AUTHENTICATION, PASSWORD POLICY & SESSION TESTS --- (5 passed)
+--- 3. BRAND ROLE GUARD & SERVER AI CONFIGURATION TESTS --- (3 passed)
+--- 4. 6-FACTOR DETERMINISTIC MATCHING SCORING TESTS --- (4 passed)
+--- 5. 19-STAGE ENGAGEMENT STATE MACHINE CONCURRENCY TESTS --- (6 passed)
+--- 6. DECOUPLED LICENSING COMPATIBILITY GATE TESTS --- (4 passed)
+--- 7. BINARY ATOM & MAGIC-BYTE DELIVERY CHECK TESTS --- (4 passed)
 --- 8. CREATOR COMMISSION WORKFLOW & PROPOSAL DECISION TESTS --- (9 passed)
 --- 9. MANDATORY ACCEPTANCE TEST SCENARIOS (TEST 1 - 18) --- (18 passed)
 --- 10. UNIVERSAL BRIEF-MATCHING & UNSEEN NATURAL LANGUAGE TEST MATRIX --- (10 passed)
 --- 11. BACKEND RELIABILITY, CONCURRENCY & PERSISTENCE TESTS --- (4 passed)
 --- 12. CREATOR PROFILE & PORTFOLIO PERSISTENCE TESTS --- (7 passed)
---- 13. ML INTELLIGENCE & HYBRID PIPELINE TESTS --- (8 passed)
+--- 13. ML INTELLIGENCE & HYBRID PIPELINE TESTS --- (13 passed)
+--- 14. WORKPLACE ACTION RESOLVER & PARTICIPANT ISOLATION TESTS --- (12 passed)
 
 ================================================================
-📊 MASTER TEST RESULTS: 97/97 PASSED (0 FAILED)
+📊 MASTER TEST RESULTS: 114/114 PASSED (0 FAILED)
 ================================================================
 ```
 
@@ -107,8 +108,21 @@ MASTER TEST SUITE RUNNER — ALL MODULES
 - Cosine similarity discrimination between creative domains.
 - Hybrid ranking pipeline combining baseline, semantic, outcome, and telemetry signals.
 - Diversity-aware MMR reranking and cold-start discovery boost.
-- Calibrated campaign outcome prediction and data sufficiency gating.
-- Offline evaluation engine (NDCG@10, Recall@K, Precision@K, MRR, Latency).
+- Calibrated campaign outcome prediction and explicit prediction modes (`INSUFFICIENT_HISTORICAL_DATA`, `HEURISTIC_ESTIMATE`, `EMPIRICALLY_VALIDATED_PREDICTION`).
+- Honest vector validation (`validateVector`) and provider model mismatch rejection (`safeCosineSimilarity`).
+- Offline evaluation engine (NDCG@10, Recall@K, Precision@K, MRR, Latency) with mathematical edge case handling (`idcg === 0` exclusion).
+- Honest telemetry persistence status reporting (`durable` vs `buffered_in_memory`).
+
+### 14. Workplace Action Resolver & Participant Isolation (`tests/unit/workplaceActions.test.ts`)
+- Creator with no requests sees zero actions and clean calm empty state.
+- Assigned creator receives authoritative `REVIEW_PROPOSAL` action on brand proposal.
+- Unrelated creators strictly blocked from viewing or acting on private proposals.
+- Anonymous / unauthenticated callers resolve to zero actions.
+- Creator acceptance immediately purges proposal action and transfers `CONFIRM_AGREEMENT` to brand.
+- Creator decline enters terminal state and disappears from all pending queues.
+- Strict role boundaries: Brand review actions never appear in creator workspace and vice versa.
+- Terminal states (`COMPLETED`, `CANCELLED`) strictly produce zero actions.
+- Deterministic action ordering and zero duplicate cards guaranteed.
 
 ---
 

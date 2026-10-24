@@ -86,74 +86,115 @@ Every score produces 2 to 4 transparent, data-backed reasons directly citing ver
 
 ---
 
-## 5. Hybrid ML Ranking Pipeline
+## 5. Canonical Hybrid ML Ranking Pipeline (`gencraft-canonical-hybrid-v2.2`)
 
-The hybrid ranking pipeline ([rankingAdapter.ts](../src/lib/ml/rankingAdapter.ts)) integrates multiple signals:
+The canonical hybrid ranking pipeline ([rankingAdapter.ts](../src/lib/ml/rankingAdapter.ts)) integrates multiple signals with mathematically transparent reweighting:
 
+### Full Information Formula (When Verified Historical Outcomes Exist)
 $$\text{FinalScore} = 0.55 \cdot S_{\text{baseline}} + 0.25 \cdot S_{\text{semantic}} + 0.15 \cdot S_{\text{outcome}} + 0.05 \cdot S_{\text{conversion}}$$
 
+### Cold-Start / Insufficient Data Formula (When Historical Outcomes Are Unavailable)
+$$\text{FinalScore} = 0.65 \cdot S_{\text{baseline}} + 0.30 \cdot S_{\text{semantic}} + 0.05 \cdot S_{\text{conversion}}$$
+
 Where:
-- $S_{\text{baseline}}$: Normalized 6-factor score ($0–1$).
-- $S_{\text{semantic}}$: Cosine similarity of 384-d dense embedding against creator profile ($0–1$).
-- $S_{\text{outcome}}$: Composite predicted outcome probability ($0–1$).
-- $S_{\text{conversion}}$: Historical interaction conversion rate ($0–1$).
+- $S_{\text{baseline}}$: Grounded 6-factor score ($0–100$).
+- $S_{\text{semantic}}$: Cosine similarity of 384-d dense embedding normalized to $[0, 100]$.
+- $S_{\text{outcome}}$: Composite predicted outcome score from verified engagements ($0–100$). Missing predictions are never fabricated as 0.85/0.90; signals are cleanly reweighted.
+- $S_{\text{conversion}}$: Historical interaction conversion rate ($0–100$, default 50 for cold start).
 
----
-
-## 6. Diversity-Aware MMR Reranking & Cold-Start Boost
-
-### Maximal Marginal Relevance (MMR)
-To prevent the top results from being monopolized by creators with identical styles or toolsets, GenCraft applies MMR reranking ([personalization.ts](../src/lib/ml/personalization.ts)):
-
-$$\text{MMR}(c) = \arg\max_{c \in R \setminus S} \left[ \lambda \cdot \text{Score}(c) - (1 - \lambda) \max_{s \in S} \text{Sim}(c, s) \right]$$
-
-With $\lambda = 0.75$, balancing high relevance with diversity across creative styles and AI tool combinations.
-
-### Cold-Start Discovery Boost
-New creators with fewer than 3 completed campaigns receive a calibrated exploration boost (+5% to +8% discovery weight) when their verified skills match brief requirements. This prevents established creators from permanently starving new talent of initial impressions.
-
----
-
-## 7. Calibrated Campaign Outcome Prediction
-
-Implemented in [outcomePrediction.ts](../src/lib/ml/outcomePrediction.ts), the outcome predictor calculates probabilistic estimates for:
-1. $p(\text{Acceptance})$: Probability the creator will accept the proposed brief based on current capacity, turnaround history, and budget alignment.
-2. $p(\text{On-Time Delivery})$: Probability of meeting project deadlines based on historical delivery timelines and pipeline complexity.
-3. $p(\text{Quality Pass})$: Probability that submitted deliverables pass automated binary delivery checks without specification overruns.
-
-### Data Sufficiency Gating
-If a creator has zero completed projects or platform history, the model returns:
-```json
-{
-  "status": "INSUFFICIENT_HISTORICAL_DATA",
-  "disclaimer": "Predictions require historical platform interactions. Showing baseline heuristic estimates."
-}
+```mermaid
+flowchart TD
+    Candidate["Eligible Candidate"] --> CheckOutcome{Sufficient Platform History?}
+    
+    CheckOutcome -- "Yes (sampleCount >= 3)" --> FullWeights["Full Canonical Formula:<br/>55% Baseline + 25% Semantic + 15% Outcome + 5% Conversion"]
+    CheckOutcome -- "No (Cold Start / Sparse)" --> ColdWeights["Reweighted Cold-Start Formula:<br/>65% Baseline + 30% Semantic + 5% Conversion"]
+    
+    FullWeights --> MMR["MMR Diversity & Personalization (lambda = 0.75)"]
+    ColdWeights --> MMR
+    
+    MMR --> FinalRanked["Final Ranked Output (isEligible: true)"]
 ```
-Probabilities are never fabricated without grounding.
+
+### Hard Constraints Are Strictly Hard Constraints
+Licensing incompatibility is **never** treated as a minor score deduction. If a creator cannot legally satisfy mandatory campaign requirements (e.g., `Worldwide` buyout required vs. `Domestic` restriction):
+1. Candidate is flagged `isEligible: false` with explicit `ineligibleReason`.
+2. Candidate's score is capped at $\le 25\%$ (relegated to bottom).
+3. Candidate is disqualified from auto-shortlisting and commission proposals.
 
 ---
 
-## 8. Marketplace Interaction Telemetry
+## 6. Vector Embeddings & Provider Compatibility
 
-The telemetry pipeline tracks 12 discrete marketplace events via [MarketplaceEvent.ts](../src/lib/models/MarketplaceEvent.ts):
-- `SEARCH_SUBMITTED`, `RESULT_IMPRESSION`, `CREATOR_VIEWED`, `PORTFOLIO_ITEM_CLICKED`
-- `PROPOSAL_SENT`, `CREATOR_ACCEPTED`, `CREATOR_DECLINED`
-- `DELIVERY_SUBMITTED`, `DELIVERY_PASSED_CHECK`, `DELIVERY_APPROVED`, `COMPLETED`, `DISPUTE_OPENED`
+### Provider Abstraction & Model Compatibility
+Implemented in [embeddings.ts](../src/lib/ml/embeddings.ts):
+- **Provider Interface**: Defined by `EmbeddingProvider` specifying `name`, `modelName`, `vectorDimension`, and `generateEmbedding`.
+- **Default Provider**: `LocalDeterministicEmbeddingProvider` (`gencraft-dense-v1.2`, 384-d).
+- **Model Incompatibility Prevention**: `safeCosineSimilarity()` verifies provider and model metadata before comparing vectors. Mismatched vector comparisons are rejected.
+- **Vector Validation**: `validateVector()` guarantees finite numeric floats, non-zero Euclidean norm, and strict dimension match ($L_2$-normalized to 1.0).
+- **Private Portfolio Exclusion**: Discovery vectors strictly exclude portfolio projects marked `private`.
+- **Cache & Invalidation**: In-memory embedding cache with TTL. `invalidateCreatorEmbedding(creatorId)` is called automatically whenever a creator modifies their profile or portfolio.
 
-Telemetry records aggregate into rolling creator conversion metrics, feeding the hybrid ranker and outcome calibration models.
+```mermaid
+flowchart LR
+    Text["Input Brief / Portfolio Text"] --> Clean["Tokenize & Filter Private Content"]
+    Clean --> Provider["EmbeddingProvider (LocalDeterministic)"]
+    Provider --> Vector["384-d Dense Float Vector"]
+    Vector --> Validation{"validateVector()<br/>(Finite & L2-Norm = 1.0)"}
+    Validation -- "Pass" --> SafeCos["safeCosineSimilarity()<br/>(Model Compatibility Guard)"]
+    Validation -- "Fail" --> Reject["Reject / Fallback Vector"]
+```
 
 ---
 
-## 9. Offline Recommendation Evaluation Suite
+## 7. Campaign Outcome Prediction Modes & Honest Calibration
 
-The offline evaluation engine ([evaluation.ts](../src/lib/ml/evaluation.ts)) benchmarks the Baseline 6-Factor model against the Hybrid ML model across 5 real evaluation brief profiles.
+Implemented in [outcomePrediction.ts](../src/lib/ml/outcomePrediction.ts), predictions are never conflated with verified empirical models unless supported by data.
 
-### Evaluation Metrics
-- **Normalized Discounted Cumulative Gain (NDCG@10 & NDCG@5)**: Measures ranking quality by penalizing relevant items appearing lower in the result list.
-- **Recall@3 & Precision@3**: Measures whether top relevant creators appear in the initial 3 results.
-- **Mean Reciprocal Rank (MRR)**: Measures how early the first highly relevant creator is found.
-- **Catalog Coverage %**: Measures percentage of active catalog creators recommended across queries.
-- **Latency**: Measures end-to-end recommendation latency in milliseconds.
+### Explicit Prediction Modes
+1. `INSUFFICIENT_HISTORICAL_DATA`: Returned for cold-start creators ($< 3$ completed projects). No fabricated probabilities are returned.
+2. `HEURISTIC_ESTIMATE`: Heuristic baseline calibrated with verified platform evidence factors.
+3. `EMPIRICALLY_VALIDATED_PREDICTION`: Activated strictly when verified sample size $\ge 10$ platform engagements exist.
+
+```mermaid
+stateDiagram-v2
+    [*] --> CheckHistory
+    CheckHistory --> INSUFFICIENT_HISTORICAL_DATA: completedProjects < 3
+    CheckHistory --> HEURISTIC_ESTIMATE: completedProjects >= 3 AND events < 10
+    CheckHistory --> EMPIRICALLY_VALIDATED_PREDICTION: completedProjects >= 10 AND verified telemetry
+```
+
+### Confidence Level Gating
+- `HIGH`: Requires $\ge 10$ verified historical platform events.
+- `MEDIUM`: Requires 5 to 9 completed engagements.
+- `LOW`: 3 to 4 completed engagements.
+- `INSUFFICIENT_DATA`: Returned for all creators with $< 3$ engagements.
+
+---
+
+## 8. Honest Telemetry Persistence & Fallbacks
+
+Implemented in [eventTracking.ts](../src/lib/ml/eventTracking.ts):
+- **Durable Persistence (`persistenceStatus: 'durable'`)**: Event successfully persisted to MongoDB `MarketplaceEventModel`.
+- **Buffered Persistence (`persistenceStatus: 'buffered_in_memory'`)**: Returned when MongoDB is unavailable or disconnected. Events are stored in a bounded FIFO memory buffer (max 1,000 entries) and deduplicated by `eventId`. The response explicitly flags that the event is in memory.
+- **Failed Persistence (`persistenceStatus: 'failed'`)**: Returned on malformed data or catastrophic buffer exhaustion.
+
+---
+
+## 9. Offline Recommendation Evaluation Suite (`bench-eval-v2.2`)
+
+The offline evaluation engine ([evaluation.ts](../src/lib/ml/evaluation.ts)) runs 7 realistic benchmark queries testing:
+1. Telugu Skincare Commercial (Niche regional language + format)
+2. B2B Enterprise SaaS Explainer (Tech / corporate tools)
+3. Fantasy Game Cinematic Trailer (CGI / VFX styling)
+4. Regional Organic Food Brand (Niche culinary / local dialect)
+5. Solar Energy Documentary (Editorial / documentary realism)
+6. Hard Licensing Constraint Test (Tests zero false positives on license conflicts)
+7. Cold-Start Creator Discovery (Evaluates new creator visibility without history)
+
+### Mathematical Edge-Case Fixes
+- `computeNDCG()`: When Ideal DCG ($IDCG$) is 0 (no positive relevance items in ground truth), returns `null` and excludes the query from aggregate NDCG averages instead of falsely returning 1.0.
+- `computeRecallAtK()`: When ground truth is empty, returns `null` rather than treating empty sets as 100% recall.
+- Supports both `Set<string>` and `string[]` inputs without throwing runtime type errors.
 
 ### Running Live Evaluation
 ```bash
@@ -162,5 +203,6 @@ curl http://localhost:3000/api/ml/evaluation
 ```
 Or execute through the test runner:
 ```bash
-npx tsx tests/run-all.ts
+npm test
 ```
+

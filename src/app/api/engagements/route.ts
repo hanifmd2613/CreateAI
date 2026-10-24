@@ -6,11 +6,25 @@ import { CreatorModel } from '../../../lib/models/Creator';
 import { INITIAL_BRIEFS, MOCK_CREATORS } from '../../../data/mockData';
 import { EngagementRecord } from '../../../types';
 
+import { verifyServerAuth } from '../../../lib/serverAuth';
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const creatorId = searchParams.get('creatorId') || undefined;
-    const brandId = searchParams.get('brandId') || undefined;
+    const authResult = await verifyServerAuth(req);
+
+    let creatorId = searchParams.get('creatorId') || undefined;
+    let brandId = searchParams.get('brandId') || undefined;
+
+    if (authResult.isAuthenticated && authResult.user) {
+      if (authResult.user.role === 'creator') {
+        creatorId = creatorId || (authResult.user as any).creatorProfileId || authResult.user.id;
+      } else if (authResult.user.role === 'brand') {
+        brandId = brandId || authResult.user.id;
+      }
+    }
 
     const items = await getEngagements({ creatorId, brandId });
     return NextResponse.json({ success: true, count: items.length, engagements: items });

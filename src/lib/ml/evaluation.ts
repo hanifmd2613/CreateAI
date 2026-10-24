@@ -2,10 +2,14 @@ import { Creator } from '../../types';
 import { executeUniversalBriefMatching } from '../universalMatching';
 import { executeHybridMLMatching } from './rankingAdapter';
 
+export const BENCHMARK_VERSION = 'bench-eval-v2.2';
+
 export interface EvaluationQueryCase {
+  id: string;
   query: string;
   category: string;
   groundTruthRelevance: Record<string, number>; // creatorId -> relevance grade (0 - 3)
+  description?: string;
 }
 
 export interface ModelMetricsSummary {
@@ -17,81 +21,128 @@ export interface ModelMetricsSummary {
   meanReciprocalRank: number;
   catalogCoveragePercent: number;
   avgLatencyMs: number;
+  validQueriesCount: number;
+  excludedQueriesCount: number;
 }
 
 export interface OfflineEvaluationReport {
   timestamp: string;
+  benchmarkVersion: string;
   totalQueriesEvaluated: number;
+  validQueriesEvaluated: number;
+  excludedQueriesCount: number;
   totalCreatorsCatalog: number;
   baselineMetrics: ModelMetricsSummary;
   hybridMLMetrics: ModelMetricsSummary;
   ndcgImprovementPercent: number;
   winner: string;
   conclusion: string;
+  measurementConditions: {
+    environment: string;
+    runsPerQuery: number;
+    warmupRuns: number;
+  };
 }
 
 /**
  * Computes Discounted Cumulative Gain (DCG@K)
  */
-function computeDCG(rankedIds: string[], relMap: Record<string, number>, k: number): number {
+export function computeDCG(rankedIds: string[], relMap: Record<string, number>, k: number): number {
+  if (!Array.isArray(rankedIds) || rankedIds.length === 0 || k <= 0 || !relMap) {
+    return 0;
+  }
+
   let dcg = 0;
   const limit = Math.min(k, rankedIds.length);
   for (let i = 0; i < limit; i++) {
     const id = rankedIds[i];
     const rel = relMap[id] || 0;
-    dcg += (Math.pow(2, rel) - 1) / Math.log2(i + 2);
+    if (typeof rel === 'number' && rel > 0 && Number.isFinite(rel)) {
+      dcg += (Math.pow(2, rel) - 1) / Math.log2(i + 2);
+    }
   }
   return dcg;
 }
 
 /**
  * Computes Normalized Discounted Cumulative Gain (NDCG@K)
+ * Policy for empty ground truth:
+ * If IDCG === 0 (no positive relevance labels defined for this query),
+ * returns null / undefined so the caller can exclude it rather than claiming false perfection (1.0).
  */
-export function computeNDCG(rankedIds: string[], relMap: Record<string, number>, k: number = 10): number {
-  const dcg = computeDCG(rankedIds, relMap, k);
+export function computeNDCG(rankedIds: string[], relMap: Record<string, number>, k: number = 10): number | null {
+  if (!relMap || Object.keys(relMap).length === 0) {
+    return null; // Excluded query: no relevance judgments
+  }
 
-  // Compute Ideal DCG (IDCG) by sorting ground-truth relevance descending
-  const idealRels = Object.values(relMap).sort((a, b) => b - a);
+  // Compute Ideal DCG (IDCG) by sorting positive ground-truth relevance descending
+  const idealRels = Object.values(relMap)
+    .filter(r => typeof r === 'number' && r > 0 && Number.isFinite(r))
+    .sort((a, b) => b - a);
+
+  if (idealRels.length === 0) {
+    return null; // Excluded: no positive relevant items exist
+  }
+
   let idcg = 0;
   const limit = Math.min(k, idealRels.length);
   for (let i = 0; i < limit; i++) {
     idcg += (Math.pow(2, idealRels[i]) - 1) / Math.log2(i + 2);
   }
 
-  if (idcg === 0) return dcg > 0 ? 1.0 : 1.0; // If no positive ground truth, perfect score
-  return Math.min(1.0, Math.max(0.0, dcg / idcg));
+  if (idcg === 0) return null;
+
+  const dcg = computeDCG(rankedIds, relMap, k);
+  const ndcg = dcg / idcg;
+  return Math.min(1.0, Math.max(0.0, Number.isFinite(ndcg) ? ndcg : 0.0));
 }
 
 /**
  * Computes Recall@K
+ * If relevantIds is empty, returns null to exclude rather than returning false perfection (1.0).
  */
-export function computeRecallAtK(rankedIds: string[], relevantIds: Set<string>, k: number = 3): number {
-  if (relevantIds.size === 0) return 1.0;
+export function computeRecallAtK(rankedIds: string[], relevantIds: Set<string> | string[], k: number = 3): number | null {
+  const relSet = relevantIds instanceof Set ? relevantIds : new Set(relevantIds || []);
+  if (!relSet || relSet.size === 0) {
+    return null; // Excluded from recall computation
+  }
+  if (!Array.isArray(rankedIds) || rankedIds.length === 0 || k <= 0) {
+    return 0;
+  }
+
   const topK = rankedIds.slice(0, k);
   let hits = 0;
   for (const id of topK) {
-    if (relevantIds.has(id)) hits++;
+    if (relSet.has(id)) hits++;
   }
-  return hits / relevantIds.size;
+  return Number((hits / relSet.size).toFixed(4));
 }
 
 /**
  * Computes Precision@K
  */
-export function computePrecisionAtK(rankedIds: string[], relevantIds: Set<string>, k: number = 3): number {
-  const limit = Math.min(k, rankedIds.length);
-  if (limit === 0) return 0;
-  let hits = 0;
-  for (let i = 0; i < limit; i++) {
-    if (relevantIds.has(rankedIds[i])) hits++;
+export function computePrecisionAtK(rankedIds: string[], relevantIds: Set<string> | string[], k: number = 3): number {
+  const relSet = relevantIds instanceof Set ? relevantIds : new Set(relevantIds || []);
+  if (!Array.isArray(rankedIds) || rankedIds.length === 0 || k <= 0 || !relSet || relSet.size === 0) {
+    return 0;
   }
-  return hits / limit;
+
+  const topK = rankedIds.slice(0, k);
+  let hits = 0;
+  for (const id of topK) {
+    if (relSet.has(id)) hits++;
+  }
+  return Number((hits / topK.length).toFixed(4));
 }
 
 /**
  * Computes Mean Reciprocal Rank (MRR)
  */
 export function computeMRR(rankedIds: string[], relevantIds: Set<string>): number {
+  if (!Array.isArray(rankedIds) || rankedIds.length === 0 || !relevantIds || relevantIds.size === 0) {
+    return 0;
+  }
+
   for (let i = 0; i < rankedIds.length; i++) {
     if (relevantIds.has(rankedIds[i])) {
       return 1 / (i + 1);
@@ -100,132 +151,242 @@ export function computeMRR(rankedIds: string[], relevantIds: Set<string>): numbe
   return 0;
 }
 
-// 5 Benchmark Validation Queries with verified relevance judgments
-export const BENCHMARK_EVAL_CASES: EvaluationQueryCase[] = [
+/**
+ * Curated, Multi-Domain Benchmark Queries (v2.2)
+ * Includes natural language briefs, regional campaigns, tool requirements,
+ * edge-case cold start creators, and licensing constraint checks.
+ */
+export const EVALUATION_BENCHMARK_SUITE: EvaluationQueryCase[] = [
   {
-    query: 'Find Telugu-speaking AI creators for a premium skincare launch with 30s vertical 9:16 videos in Hyderabad.',
-    category: 'Skincare Regional',
-    groundTruthRelevance: { 'creator-6': 3, 'creator-8': 2, 'creator-1': 1, 'creator-2': 0 }
+    id: 'case-1-skincare',
+    query: 'Need a vertical 9:16 video creator in Hyderabad/Bengaluru for organic ayurvedic skincare brand launch. Clean pastel aesthetic, female creator preferred, certified pipeline.',
+    category: 'Skincare & Cosmetics',
+    groundTruthRelevance: {
+      'creator-3': 3, // Meera Krishnan (Hyderabad, organic skincare)
+      'creator-2': 1, // Ananya Nair (Stylized anime/fantasy, partial)
+      'creator-1': 1, // Karthik Subramanian (Automotive/commercials)
+    },
+    description: 'Regional language and product category alignment.'
   },
   {
-    query: 'B2B enterprise SaaS software cloud platform product commercial video in 16:9.',
+    id: 'case-2-saas',
+    query: 'B2B enterprise SaaS cloud security commercial. 16:9 widescreen format, high-tech abstract data streams, motion design in Veo or Kling.',
     category: 'Enterprise SaaS',
-    groundTruthRelevance: { 'creator-1': 3, 'creator-5': 2, 'creator-3': 1 }
+    groundTruthRelevance: {
+      'creator-1': 3, // Karthik Subramanian (Certified Veo/Kling commercial director)
+      'creator-4': 2, // Rohan Sharma (3D/VFX photorealism)
+      'creator-3': 0,
+    },
+    description: 'B2B commercial storytelling with certified AI video tools.'
   },
   {
-    query: 'Generative-AI fantasy RPG game trailer with warrior characters and cinematic photorealistic visuals.',
-    category: 'Gaming VFX',
-    groundTruthRelevance: { 'creator-3': 3, 'creator-1': 2, 'creator-7': 1 }
+    id: 'case-3-anime',
+    query: 'Dark fantasy video game trailer with stylized cel-shaded character motion, mythical beasts, and cinematic battle choreography.',
+    category: 'Gaming & Anime',
+    groundTruthRelevance: {
+      'creator-2': 3, // Ananya Nair (Dark fantasy/mythological anime specialist)
+      'creator-1': 1,
+      'creator-4': 1,
+    },
+    description: 'Stylized aesthetic and genre-specific visual effects.'
   },
   {
-    query: 'Luxury horlogerie titanium watch macro photography and product video in 1:1 aspect ratio.',
-    category: 'Luxury Product',
-    groundTruthRelevance: { 'creator-2': 3, 'creator-7': 2, 'creator-1': 1 }
+    id: 'case-4-luxury',
+    query: 'Macro horology watch commercial showcasing titanium bezel, sapphire crystal reflections, and precision micro-mechanical movement.',
+    category: 'Luxury Goods',
+    groundTruthRelevance: {
+      'creator-4': 3, // Rohan Sharma (Macro product visualization & horology portfolio)
+      'creator-1': 1,
+      'creator-2': 0,
+    },
+    description: 'Macro photorealism and luxury physical material rendering.'
   },
   {
-    query: 'Sustainability documentary campaign on clean solar energy and environmental nature.',
+    id: 'case-5-sustainability',
+    query: 'Documentary on Western Ghats reforestation and renewable solar microgrids. Cinematic slow motion and authentic color grade.',
     category: 'Sustainability',
-    groundTruthRelevance: { 'creator-1': 3, 'creator-5': 2, 'creator-4': 1 }
+    groundTruthRelevance: {
+      'creator-1': 3, // Karthik Subramanian (Documentary & narrative pacing)
+      'creator-3': 2, // Meera Krishnan (Nature/eco aesthetic)
+      'creator-4': 0,
+    },
+    description: 'Nature documentary realism and color grading.'
+  },
+  {
+    id: 'case-6-unseen-niche',
+    query: 'Retro 1980s synthwave laser-grid arcade promotional trailer with CRT phosphor glow and neon wireframes.',
+    category: 'Unseen Aesthetic',
+    groundTruthRelevance: {
+      'creator-2': 2, // Ananya Nair (Cyberpunk/synthwave styling)
+      'creator-4': 2, // Rohan Sharma (Neon/VFX)
+    },
+    description: 'Unseen niche prompt with sparse lexical match.'
+  },
+  {
+    id: 'case-7-licensing-filter',
+    query: 'Worldwide commercial TV broadcast campaign requiring Category Exclusive rights and full derivative usage.',
+    category: 'Licensing Constraints',
+    groundTruthRelevance: {
+      'creator-1': 3, // Karthik Subramanian (Worldwide commercial rights)
+      'creator-4': 2, // Rohan Sharma
+    },
+    description: 'Evaluates hard licensing gate compatibility.'
   }
 ];
 
 /**
- * Executes full offline benchmark evaluation comparing Baseline 6-Factor vs Hybrid ML Pipeline.
+ * Runs full offline recommendation evaluation comparing Baseline vs. Hybrid ML Ranker.
  */
-export async function runOfflineModelEvaluation(
+export async function runOfflineRecommendationEvaluation(
   creators: Creator[],
-  cases: EvaluationQueryCase[] = BENCHMARK_EVAL_CASES
+  benchmarkSuite: EvaluationQueryCase[] = EVALUATION_BENCHMARK_SUITE
 ): Promise<OfflineEvaluationReport> {
-  let baselineTotalNDCG10 = 0;
-  let baselineTotalNDCG5 = 0;
-  let baselineTotalRecall3 = 0;
-  let baselineTotalPrec3 = 0;
-  let baselineTotalMRR = 0;
-  let baselineLatencySum = 0;
-  const baselineSurfacedCreators = new Set<string>();
+  const timestamp = new Date().toISOString();
 
-  let hybridTotalNDCG10 = 0;
-  let hybridTotalNDCG5 = 0;
-  let hybridTotalRecall3 = 0;
-  let hybridTotalPrec3 = 0;
-  let hybridTotalMRR = 0;
-  let hybridLatencySum = 0;
-  const hybridSurfacedCreators = new Set<string>();
+  // Metrics accumulators for Baseline
+  const baseNDCG10: number[] = [];
+  const baseNDCG5: number[] = [];
+  const baseRecall3: number[] = [];
+  const basePrec3: number[] = [];
+  const baseMRR: number[] = [];
+  const baseCovered = new Set<string>();
+  let baseTotalLatency = 0;
 
-  for (const c of cases) {
-    const relevantSet = new Set(
-      Object.entries(c.groundTruthRelevance)
+  // Metrics accumulators for Hybrid ML
+  const hybridNDCG10: number[] = [];
+  const hybridNDCG5: number[] = [];
+  const hybridRecall3: number[] = [];
+  const hybridPrec3: number[] = [];
+  const hybridMRR: number[] = [];
+  const hybridCovered = new Set<string>();
+  let hybridTotalLatency = 0;
+
+  let validQueriesCount = 0;
+  let excludedQueriesCount = 0;
+
+  for (const testCase of benchmarkSuite) {
+    const relMap = testCase.groundTruthRelevance;
+    const relevantIds = new Set(
+      Object.entries(relMap)
         .filter(([_, rel]) => rel >= 2)
         .map(([id]) => id)
     );
 
-    // 1. Evaluate Baseline Six-Factor Model
+    // 1. Evaluate Baseline Model
     const t0 = performance.now();
-    const baselineRun = executeUniversalBriefMatching(c.query, creators);
+    const baseRun = executeUniversalBriefMatching(testCase.query, creators);
     const t1 = performance.now();
-    baselineLatencySum += (t1 - t0);
+    baseTotalLatency += (t1 - t0);
 
-    const baselineIds = baselineRun.matches.map(m => m.creatorId);
-    baselineIds.slice(0, 3).forEach(id => baselineSurfacedCreators.add(id));
+    const baseRankedIds = baseRun.matches.map(m => m.creator.id);
+    baseRankedIds.slice(0, 3).forEach(id => baseCovered.add(id));
 
-    baselineTotalNDCG10 += computeNDCG(baselineIds, c.groundTruthRelevance, 10);
-    baselineTotalNDCG5 += computeNDCG(baselineIds, c.groundTruthRelevance, 5);
-    baselineTotalRecall3 += computeRecallAtK(baselineIds, relevantSet, 3);
-    baselineTotalPrec3 += computePrecisionAtK(baselineIds, relevantSet, 3);
-    baselineTotalMRR += computeMRR(baselineIds, relevantSet);
-
-    // 2. Evaluate Hybrid ML Pipeline
+    // 2. Evaluate Hybrid ML Model
     const t2 = performance.now();
-    const hybridRun = await executeHybridMLMatching(c.query, creators);
+    const hybridRun = await executeHybridMLMatching(testCase.query, creators, { enableDiversity: true });
     const t3 = performance.now();
-    hybridLatencySum += (t3 - t2);
+    hybridTotalLatency += (t3 - t2);
 
-    const hybridIds = hybridRun.matches.map(m => m.creatorId);
-    hybridIds.slice(0, 3).forEach(id => hybridSurfacedCreators.add(id));
+    const hybridRankedIds = hybridRun.matches.map(m => m.creator.id);
+    hybridRankedIds.slice(0, 3).forEach(id => hybridCovered.add(id));
 
-    hybridTotalNDCG10 += computeNDCG(hybridIds, c.groundTruthRelevance, 10);
-    hybridTotalNDCG5 += computeNDCG(hybridIds, c.groundTruthRelevance, 5);
-    hybridTotalRecall3 += computeRecallAtK(hybridIds, relevantSet, 3);
-    hybridTotalPrec3 += computePrecisionAtK(hybridIds, relevantSet, 3);
-    hybridTotalMRR += computeMRR(hybridIds, relevantSet);
+    // Compute NDCG
+    const bNDCG10 = computeNDCG(baseRankedIds, relMap, 10);
+    const hNDCG10 = computeNDCG(hybridRankedIds, relMap, 10);
+    const bNDCG5 = computeNDCG(baseRankedIds, relMap, 5);
+    const hNDCG5 = computeNDCG(hybridRankedIds, relMap, 5);
+
+    if (bNDCG10 !== null && hNDCG10 !== null) {
+      baseNDCG10.push(bNDCG10);
+      hybridNDCG10.push(hNDCG10);
+      validQueriesCount++;
+    } else {
+      excludedQueriesCount++;
+    }
+
+    if (bNDCG5 !== null && hNDCG5 !== null) {
+      baseNDCG5.push(bNDCG5);
+      hybridNDCG5.push(hNDCG5);
+    }
+
+    // Compute Recall & Precision
+    const bRec = computeRecallAtK(baseRankedIds, relevantIds, 3);
+    const hRec = computeRecallAtK(hybridRankedIds, relevantIds, 3);
+    if (bRec !== null && hRec !== null) {
+      baseRecall3.push(bRec);
+      hybridRecall3.push(hRec);
+    }
+
+    basePrec3.push(computePrecisionAtK(baseRankedIds, relevantIds, 3));
+    hybridPrec3.push(computePrecisionAtK(hybridRankedIds, relevantIds, 3));
+
+    // Compute MRR
+    baseMRR.push(computeMRR(baseRankedIds, relevantIds));
+    hybridMRR.push(computeMRR(hybridRankedIds, relevantIds));
   }
 
-  const n = cases.length;
+  const avg = (arr: number[]) => arr.length > 0 ? Number((arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(4)) : 0;
+
   const totalCatalog = creators.length || 1;
 
   const baselineSummary: ModelMetricsSummary = {
     modelName: 'baseline-6factor-v2.1',
-    ndcgAt10: Number((baselineTotalNDCG10 / n).toFixed(4)),
-    ndcgAt5: Number((baselineTotalNDCG5 / n).toFixed(4)),
-    recallAt3: Number((baselineTotalRecall3 / n).toFixed(4)),
-    precisionAt3: Number((baselineTotalPrec3 / n).toFixed(4)),
-    meanReciprocalRank: Number((baselineTotalMRR / n).toFixed(4)),
-    catalogCoveragePercent: Number(((baselineSurfacedCreators.size / totalCatalog) * 100).toFixed(1)),
-    avgLatencyMs: Number((baselineLatencySum / n).toFixed(2)),
+    ndcgAt10: avg(baseNDCG10),
+    ndcgAt5: avg(baseNDCG5),
+    recallAt3: avg(baseRecall3),
+    precisionAt3: avg(basePrec3),
+    meanReciprocalRank: avg(baseMRR),
+    catalogCoveragePercent: Number(((baseCovered.size / totalCatalog) * 100).toFixed(1)),
+    avgLatencyMs: Number((baseTotalLatency / benchmarkSuite.length).toFixed(2)),
+    validQueriesCount,
+    excludedQueriesCount,
   };
 
   const hybridSummary: ModelMetricsSummary = {
-    modelName: 'gencraft-hybrid-ranker-v1.2',
-    ndcgAt10: Number((hybridTotalNDCG10 / n).toFixed(4)),
-    ndcgAt5: Number((hybridTotalNDCG5 / n).toFixed(4)),
-    recallAt3: Number((hybridTotalRecall3 / n).toFixed(4)),
-    precisionAt3: Number((hybridTotalPrec3 / n).toFixed(4)),
-    meanReciprocalRank: Number((hybridTotalMRR / n).toFixed(4)),
-    catalogCoveragePercent: Number(((hybridSurfacedCreators.size / totalCatalog) * 100).toFixed(1)),
-    avgLatencyMs: Number((hybridLatencySum / n).toFixed(2)),
+    modelName: 'gencraft-canonical-hybrid-v2.2',
+    ndcgAt10: avg(hybridNDCG10),
+    ndcgAt5: avg(hybridNDCG5),
+    recallAt3: avg(hybridRecall3),
+    precisionAt3: avg(hybridPrec3),
+    meanReciprocalRank: avg(hybridMRR),
+    catalogCoveragePercent: Number(((hybridCovered.size / totalCatalog) * 100).toFixed(1)),
+    avgLatencyMs: Number((hybridTotalLatency / benchmarkSuite.length).toFixed(2)),
+    validQueriesCount,
+    excludedQueriesCount,
   };
 
-  const ndcgDiff = hybridSummary.ndcgAt10 - baselineSummary.ndcgAt10;
-  const improvement = baselineSummary.ndcgAt10 > 0 ? (ndcgDiff / baselineSummary.ndcgAt10) * 100 : 0;
+  const deltaNDCG = baselineSummary.ndcgAt10 > 0
+    ? Number((((hybridSummary.ndcgAt10 - baselineSummary.ndcgAt10) / baselineSummary.ndcgAt10) * 100).toFixed(2))
+    : 0;
+
+  const winner = hybridSummary.ndcgAt10 >= baselineSummary.ndcgAt10
+    ? hybridSummary.modelName
+    : baselineSummary.modelName;
+
+  const conclusion = `Evaluated ${benchmarkSuite.length} benchmark queries across ${totalCatalog} creators. Canonical Hybrid ML model achieved NDCG@10 of ${hybridSummary.ndcgAt10} (vs ${baselineSummary.ndcgAt10} baseline) with average latency of ${hybridSummary.avgLatencyMs}ms.`;
 
   return {
-    timestamp: new Date().toISOString(),
-    totalQueriesEvaluated: n,
+    timestamp,
+    benchmarkVersion: BENCHMARK_VERSION,
+    totalQueriesEvaluated: benchmarkSuite.length,
+    validQueriesEvaluated: validQueriesCount,
+    excludedQueriesCount,
     totalCreatorsCatalog: totalCatalog,
     baselineMetrics: baselineSummary,
     hybridMLMetrics: hybridSummary,
-    ndcgImprovementPercent: Number(improvement.toFixed(2)),
-    winner: hybridSummary.ndcgAt10 >= baselineSummary.ndcgAt10 ? hybridSummary.modelName : baselineSummary.modelName,
-    conclusion: `Hybrid ML model achieved NDCG@10 of ${hybridSummary.ndcgAt10} (vs ${baselineSummary.ndcgAt10} baseline) with average latency of ${hybridSummary.avgLatencyMs}ms.`
+    ndcgImprovementPercent: deltaNDCG,
+    winner,
+    conclusion,
+    measurementConditions: {
+      environment: typeof process !== 'undefined' ? `${process.platform}-${process.arch}` : 'node-runtime',
+      runsPerQuery: 1,
+      warmupRuns: 0,
+    }
   };
 }
+
+/**
+  * Backward-compatible alias for existing tests and routes
+  */
+export const runOfflineModelEvaluation = runOfflineRecommendationEvaluation;
+

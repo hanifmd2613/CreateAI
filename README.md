@@ -3,7 +3,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue.svg)](tsconfig.json)
 [![Next.js](https://img.shields.io/badge/Next.js-14.2-black.svg)](package.json)
 [![MongoDB](https://img.shields.io/badge/MongoDB-6.9-green.svg)](src/lib/mongodb.ts)
-[![Tests](https://img.shields.io/badge/Tests-97%20Passed-brightgreen.svg)](docs/TESTING.md)
+[![Tests](https://img.shields.io/badge/Tests-114%20Passed-brightgreen.svg)](docs/TESTING.md)
 
 **GenCraft** is an enterprise-grade AI Content Creator Marketplace connecting leading brands and creative agencies with elite, vetted Generative AI directors and digital artists. The platform provides complete lifecycle management from AI-assisted brief creation and hybrid ML recommendation to legally binding licensing, commission workflows, draft versioning, physical binary media delivery checks, and brand sign-off.
 
@@ -11,13 +11,39 @@
 
 ## ⚡ Core Capabilities
 
+- **Server-Authoritative Action Resolver**: Eliminates false "Next Action Required" alerts. Evaluates genuine persisted engagements against the 19-stage state machine so creators and brands only see verified, authorized actions with real deadlines.
 - **Intelligent Hybrid Recommendation Engine**: Blends an explainable 6-factor baseline (55%), 384-dimensional dense semantic vector embeddings (`gencraft-dense-v1.2`, 25%), calibrated campaign outcome predictions (15%), and conversion telemetry (5%).
-- **Decoupled Licensing Compatibility Gate**: Automatically validates commercial rights, territory (Worldwide vs. Domestic), channel exclusivity (Paid Advertising vs. Organic Social), and duration before clearance.
+- **Decoupled Licensing Compatibility Gate**: Hard constraint filter that immediately quarantines legal incompatibilities (`isEligible: false`) rather than merely reducing scores.
 - **19-Stage Engagement State Machine**: Deterministic FSM enforcing strict role authority between brands and creators across every milestone.
 - **Creator Profile & Portfolio Management Studio (`/creator/profile`)**: Dynamic completeness meter, rich project showcases, and server-side privacy filtering (`/creators/:id`).
 - **Binary Magic-Byte Media Uploads & Delivery Inspection**: Real binary header inspection of JPEG, PNG, WebP, GIF, and ISO-BMFF MP4 video atoms (`ftyp`, `mvhd`) verifying dimensions, aspect ratio (e.g., 9:16 vertical), and duration against brief specifications.
 - **Immutable Revision Ledger**: Cryptographically fingerprinted draft versions (V1, V2...) with timestamp-anchored review feedback.
 - **Autonomous Auto-Shortlist Agent**: AI agent that scans briefs, filters hard constraints, and formulates candidate shortlists with human-in-the-loop oversight.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Brand as Brand / Agency
+    participant UI as GenCraft Workplace UI
+    participant Server as Action Resolver & API
+    participant ML as Hybrid ML Engine
+    actor Creator as AI Content Creator
+
+    Brand->>ML: Submit Campaign Brief (Natural Language)
+    ML->>Brand: Ranked Candidates (55% Base + 25% Embed + 15% Outcome + 5% Conv)
+    Brand->>Server: Send Commission Proposal (Status: CONTACTED)
+    Server-->>Creator: Workplace Action: REVIEW_PROPOSAL
+    Creator->>Server: Accept Commission Proposal (Status: CREATOR_ACCEPTED)
+    Server-->>Creator: Action Disappears Immediately
+    Server-->>Brand: Workplace Action: CONFIRM_AGREEMENT
+    Brand->>Server: Lock Milestones & Scope (Status: IN_PRODUCTION)
+    Server-->>Creator: Workplace Action: SUBMIT_FIRST_DRAFT
+    Creator->>Server: Upload V1 Video Binary (Magic-Byte & Atom Check)
+    Server-->>Brand: Workplace Action: REVIEW_DRAFT
+    Brand->>Server: Approve & Release Escrow (Status: COMPLETED)
+    Server-->>Brand: Status: COMPLETED (Zero Remaining Actions)
+    Server-->>Creator: Status: COMPLETED (Zero Remaining Actions)
+```
 
 ---
 

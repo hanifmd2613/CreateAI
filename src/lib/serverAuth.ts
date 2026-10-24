@@ -60,6 +60,17 @@ export async function getAuthenticatedUser(req: NextRequest): Promise<UserAccoun
 }
 
 /**
+ * Validates server authentication and returns structured auth status.
+ */
+export async function verifyServerAuth(req: NextRequest): Promise<{ isAuthenticated: boolean; user: UserAccount | null }> {
+  const user = await getAuthenticatedUser(req);
+  return {
+    isAuthenticated: !!user,
+    user,
+  };
+}
+
+/**
  * Enforces that caller is authenticated and authorized to mutate the given creator's profile/portfolio.
  */
 export async function verifyCreatorOwnership(

@@ -11,6 +11,7 @@ import {
   UserRole,
   Brief
 } from '../types';
+import { WorkplaceActionItem } from '../lib/actionResolver';
 import {
   ShieldCheck,
   AlertTriangle,
@@ -64,6 +65,11 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
 
+  // Authoritative Pending Actions Hub State
+  const [pendingActions, setPendingActions] = useState<WorkplaceActionItem[]>([]);
+  const [isActionsLoading, setIsActionsLoading] = useState(true);
+  const [actionsError, setActionsError] = useState<string | null>(null);
+
   // New feedback input state
   const [newFeedbackComment, setNewFeedbackComment] = useState('');
   const [newFeedbackOffset, setNewFeedbackOffset] = useState<string>('0');
@@ -89,20 +95,47 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
 
   const activeRole: UserRole = currentUser?.role || 'brand';
 
-  // Load all engagements
+  // Fetch Authoritative Pending Actions for current user & role
+  const fetchPendingActions = async () => {
+    setIsActionsLoading(true);
+    setActionsError(null);
+    try {
+      const userId = currentUser?.id || '';
+      const res = await fetch(`/api/workplace/actions?userId=${encodeURIComponent(userId)}&role=${encodeURIComponent(activeRole)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPendingActions(data.actions || []);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setActionsError(errData.error?.message || 'Failed to fetch pending actions');
+      }
+    } catch (e: any) {
+      setActionsError(e.message || 'Network error fetching pending actions');
+    } finally {
+      setIsActionsLoading(false);
+    }
+  };
+
+  // Load all engagements matching current authenticated participant
   const fetchEngagements = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/engagements');
+      const url = currentUser?.role === 'creator'
+        ? `/api/engagements?creatorId=${encodeURIComponent(currentUser.id)}`
+        : (currentUser?.role === 'brand' ? `/api/engagements?brandId=${encodeURIComponent(currentUser.id)}` : '/api/engagements');
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        setEngagements(data.engagements || []);
-        if (data.engagements && data.engagements.length > 0) {
+        const engList: EngagementRecord[] = data.engagements || [];
+        setEngagements(engList);
+        if (engList.length > 0) {
           const target = initialEngagementId
-            ? data.engagements.find((e: EngagementRecord) => e.id === initialEngagementId) || data.engagements[0]
-            : data.engagements[0];
+            ? engList.find((e: EngagementRecord) => e.id === initialEngagementId) || engList[0]
+            : engList[0];
           setSelectedEngagement(target);
           await loadEngagementDetails(target.id);
+        } else {
+          setSelectedEngagement(null);
         }
       }
     } catch (e) {
@@ -144,7 +177,8 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
 
   useEffect(() => {
     fetchEngagements();
-  }, []);
+    fetchPendingActions();
+  }, [currentUser?.id, currentUser?.role]);
 
   // Transition state handler
   const handleTransition = async (targetState: string, additionalPayload: Record<string, any> = {}) => {
@@ -177,11 +211,8 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
           onShowToast(`Engagement advanced to ${targetState}!`);
         }
         await loadEngagementDetails(selectedEngagement.id);
-        const listRes = await fetch('/api/engagements');
-        if (listRes.ok) {
-          const listData = await listRes.json();
-          setEngagements(listData.engagements || []);
-        }
+        await fetchEngagements();
+        await fetchPendingActions();
       } else {
         onShowToast(`Action blocked: ${data.error?.message || 'Invalid transition'}`);
       }
@@ -215,6 +246,8 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
       if (res.ok && data.success) {
         onShowToast('Scope & Licensing terms formally confirmed! Active in production.');
         await loadEngagementDetails(selectedEngagement.id);
+        await fetchEngagements();
+        await fetchPendingActions();
       } else {
         onShowToast(`Cannot confirm: ${data.error?.message || 'Conflict detected'}`);
       }
@@ -256,6 +289,8 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
         setUploadModalOpen(false);
         setDraftNotes('');
         await loadEngagementDetails(selectedEngagement.id);
+        await fetchEngagements();
+        await fetchPendingActions();
       } else {
         onShowToast(`Upload error: ${data.error?.message || 'Failed to submit draft'}`);
       }
@@ -450,6 +485,107 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
         </div>
       </div>
 
+      {/* Authoritative Action Required Hub */}
+      {isActionsLoading ? (
+        <div className="p-4 rounded-2xl bg-zinc-900/40 border border-zinc-800 animate-pulse space-y-2">
+          <div className="h-3.5 bg-zinc-800 rounded w-1/5" />
+          <div className="h-10 bg-zinc-800/40 rounded-xl" />
+        </div>
+      ) : actionsError ? (
+        <div className="p-4 rounded-2xl bg-red-950/20 border border-red-900/40 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-red-400">
+            <AlertTriangle className="w-4 h-4 text-red-400" />
+            <span>Unable to load pending actions: {actionsError}</span>
+          </div>
+          <button
+            onClick={fetchPendingActions}
+            className="px-3 py-1 rounded-lg bg-zinc-900 text-xs text-zinc-300 hover:text-white transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      ) : pendingActions.length === 0 ? (
+        <div className="p-4 rounded-2xl bg-zinc-900/30 border border-zinc-800/60 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <Check className="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-semibold text-zinc-200">You're all caught up</h4>
+              <p className="text-[11px] text-zinc-500">No pending actions require your attention right now.</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono text-zinc-600">0 Actions Required</span>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                Action Required ({pendingActions.length})
+              </h3>
+            </div>
+            <span className="text-[11px] text-zinc-500">Authoritative pending items for your role</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {pendingActions.map(act => (
+              <div
+                key={act.id}
+                className="p-4 rounded-2xl bg-zinc-900 border border-zinc-750 hover:border-zinc-600 transition-all shadow-md space-y-2.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      {act.actionTitle}
+                    </span>
+                    <h4 className="text-sm font-bold text-white mt-1.5">{act.projectTitle}</h4>
+                    <p className="text-[11px] text-zinc-400">
+                      from <strong className="text-zinc-200">{act.counterpartyName}</strong> ({act.counterpartyRole})
+                    </p>
+                  </div>
+                  {act.deadline && (
+                    <div className="text-right">
+                      <span className="text-[10px] text-zinc-500 block font-mono">DEADLINE</span>
+                      <span className="text-xs font-mono text-zinc-300">{act.deadline}</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-300 leading-relaxed bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-800/80">
+                  {act.actionDescription}
+                </p>
+                <div className="flex items-center justify-between pt-1">
+                  {act.budget ? (
+                    <span className="text-xs font-mono font-bold text-emerald-400">
+                      ₹{act.budget.toLocaleString('en-IN')}
+                    </span>
+                  ) : <span />}
+                  <button
+                    onClick={() => {
+                      const targetEng = engagements.find(e => e.id === act.engagementId);
+                      if (targetEng) {
+                        setSelectedEngagement(targetEng);
+                        loadEngagementDetails(targetEng.id);
+                      }
+                      if (act.actionType === 'REVIEW_PROPOSAL') {
+                        setWorkspaceTab('proposal');
+                      } else if (act.actionType === 'SUBMIT_FIRST_DRAFT' || act.actionType === 'SUBMIT_REVISION') {
+                        setWorkspaceTab('production');
+                        setUploadModalOpen(true);
+                      }
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
+                  >
+                    <span>{act.ctaLabel}</span>
+                    <ArrowRight className="w-3.5 h-3.5 text-zinc-950" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {selectedEngagement && (
         <>
           {/* Status Pipeline & Key Metrics Ribbon */}
@@ -516,24 +652,57 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
           </div>
 
           {/* Interactive Role-Based Action Bar */}
-          <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-750 flex flex-wrap items-center justify-between gap-3 shadow-xl">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-xs font-semibold text-white">Next Action Required:</span>
-              <span className="text-xs text-zinc-400">
-                {selectedEngagement.status === 'CONTACTED' && activeRole === 'creator' && 'Review commission proposal and accept or decline.'}
-                {selectedEngagement.status === 'CONTACTED' && activeRole === 'brand' && 'Waiting for creator acceptance.'}
-                {selectedEngagement.status === 'CREATOR_ACCEPTED' && 'Confirm formal scope and licensing agreement.'}
-                {selectedEngagement.status === 'IN_PRODUCTION' && activeRole === 'creator' && 'Upload Draft Version 1 asset for review.'}
-                {selectedEngagement.status === 'IN_PRODUCTION' && activeRole === 'brand' && 'Creator is currently producing initial generative keyframes.'}
-                {selectedEngagement.status === 'DRAFT_SUBMITTED' && activeRole === 'brand' && 'Inspect automated delivery checks and provide version feedback or approve.'}
-                {selectedEngagement.status === 'REVISION_REQUESTED' && activeRole === 'creator' && 'Review brand feedback comments and upload revised cut.'}
-                {selectedEngagement.status === 'FINAL_REVIEW' && activeRole === 'brand' && 'Sign off on final deliverable approval.'}
-                {selectedEngagement.status === 'DELIVERY_APPROVED' && 'Deliverable approved! Release escrow to complete engagement.'}
-                {selectedEngagement.status === 'COMPLETED' && 'Engagement is fully completed and sealed in the audit log.'}
-                {selectedEngagement.status === 'CREATOR_DECLINED' && `Creator declined: "${selectedEngagement.declineReason || 'Schedule conflict'}".`}
-              </span>
-            </div>
+          {(() => {
+            const currentAction = pendingActions.find(a => a.engagementId === selectedEngagement.id);
+            const isUserAction = Boolean(currentAction);
+
+            return (
+              <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-750 flex flex-wrap items-center justify-between gap-3 shadow-xl">
+                <div className="flex items-center gap-2">
+                  {isUserAction ? (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-xs font-bold text-white">Action Required from You:</span>
+                      <span className="text-xs text-zinc-200 font-medium">{currentAction?.actionTitle}</span>
+                    </>
+                  ) : selectedEngagement.status === 'CONTACTED' && activeRole === 'brand' ? (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
+                      <span className="text-xs font-semibold text-zinc-300">Awaiting Creator Decision:</span>
+                      <span className="text-xs text-zinc-400">Waiting for {selectedEngagement.creatorName} to accept or decline proposal.</span>
+                    </>
+                  ) : selectedEngagement.status === 'IN_PRODUCTION' && activeRole === 'brand' ? (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400/80" />
+                      <span className="text-xs font-semibold text-zinc-300">In Production:</span>
+                      <span className="text-xs text-zinc-400">{selectedEngagement.creatorName} is actively producing initial draft keyframes.</span>
+                    </>
+                  ) : selectedEngagement.status === 'DRAFT_SUBMITTED' && activeRole === 'creator' ? (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-400/80" />
+                      <span className="text-xs font-semibold text-zinc-300">Draft Under Review:</span>
+                      <span className="text-xs text-zinc-400">{selectedEngagement.brandName} is inspecting delivery checks and review comments.</span>
+                    </>
+                  ) : selectedEngagement.status === 'COMPLETED' ? (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-600" />
+                      <span className="text-xs font-semibold text-zinc-400">Campaign Completed:</span>
+                      <span className="text-xs text-zinc-500">Engagement successfully delivered and sealed in the audit log.</span>
+                    </>
+                  ) : selectedEngagement.status === 'CREATOR_DECLINED' ? (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
+                      <span className="text-xs font-semibold text-zinc-400">Proposal Declined:</span>
+                      <span className="text-xs text-zinc-500">Creator declined: "{selectedEngagement.declineReason || 'Schedule conflict'}".</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="w-2.5 h-2.5 rounded-full bg-zinc-600" />
+                      <span className="text-xs font-semibold text-zinc-400">Status:</span>
+                      <span className="text-xs text-zinc-400">{selectedEngagement.status}</span>
+                    </>
+                  )}
+                </div>
 
             <div className="flex items-center gap-2">
               {/* Creator: Accept / Decline Inquiry */}
@@ -628,6 +797,8 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
               )}
             </div>
           </div>
+        );
+      })()}
 
           {/* Section Navigation Tabs: Proposal Review vs Production Workspace */}
           <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
