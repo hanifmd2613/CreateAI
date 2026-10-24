@@ -294,8 +294,8 @@ export interface EngagementRecord {
   proposedBudget: string;
   status: EngagementStatus;
   licensingStatus: LicensingStatus;
-  message: string;
-  milestones: EngagementMilestone[];
+  message?: string;
+  milestones?: EngagementMilestone[];
   agreedTerms?: AgreedEngagementTerms;
   currentVersionNumber: number;
   maxRevisions: number;

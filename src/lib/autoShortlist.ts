@@ -121,3 +121,42 @@ export function createAuditLog(
     details,
   };
 }
+
+const memoryProposals: Map<string, AutoShortlistProposal> = new Map();
+
+export function generateAutonomousShortlistProposal(
+  brief: Brief,
+  creators: Creator[],
+  maxCandidates: number = 3
+): AutoShortlistProposal {
+  const proposal = generateAutoShortlistProposal({ brief, creators, maxCandidates });
+  memoryProposals.set(proposal.id, proposal);
+  return proposal;
+}
+
+export function decideOnShortlistProposal(
+  proposalId: string,
+  decision: 'ACCEPTED' | 'REJECTED' | 'EDITED',
+  notes?: string
+): AutoShortlistProposal {
+  let proposal = memoryProposals.get(proposalId);
+  if (!proposal) {
+    proposal = {
+      id: proposalId,
+      briefId: 'brief-unknown',
+      briefTitle: 'Campaign Brief',
+      evaluatedCandidatesCount: 0,
+      shortlist: [],
+      excludedCandidates: [],
+      status: 'PROPOSED',
+      createdAt: new Date().toISOString(),
+    };
+    memoryProposals.set(proposalId, proposal);
+  }
+
+  proposal.status = decision;
+  proposal.decidedAt = new Date().toISOString();
+  proposal.brandDecisionNotes = notes;
+  return proposal;
+}
+

@@ -597,3 +597,19 @@ export async function saveShortlistProposal(proposal: AutoShortlistProposal): Pr
 
   return proposal;
 }
+
+// Aliases for unified test and consumer interfaces
+export const getAllEngagements = getEngagements;
+export const addDeliverableVersion = saveVersion;
+export const getDeliverableVersions = getVersions;
+export const addVersionFeedback = saveFeedback;
+export const getVersionFeedback = (versionId: string) => {
+  return Array.from(feedbackMemory.values()).filter(f => f.versionId === versionId);
+};
+export const saveDeliveryCheckResult = saveDeliveryCheck;
+export const getDeliveryCheckResult = (id: string) => {
+  return deliveryChecksMemory.get(id) || null;
+};
+export const addAuditLog = recordAudit;
+
+

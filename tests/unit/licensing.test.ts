@@ -7,21 +7,21 @@ export function runLicensingUnitTests(): { name: string; passed: boolean; messag
   // Subtest 1: Full Commercial Buyout Compatibility
   try {
     const briefReqs: LicensingRequirements = {
-      usageType: 'commercial',
+      commercialScope: 'Commercial Licensed',
       territory: 'Worldwide',
       durationMonths: 12,
-      paidAdvertisingAllowed: true,
-      exclusivityRequired: true,
-      derivativeWorksAllowed: true,
+      channels: ['Paid Advertising', 'Organic Social', 'Digital / Web'],
+      exclusivity: 'Category Exclusive',
+      derivativeRights: true,
     };
 
     const creatorTerms: CreatorLicensingTerms = {
-      standardLicense: 'commercial_buyout',
-      territory: 'Worldwide',
-      durationMonths: 24,
-      paidAdvertisingAllowed: true,
+      permittedScope: 'Full Buyout',
+      allowedTerritories: ['Worldwide'],
+      maxDurationMonths: 24,
+      allowedChannels: ['Paid Advertising', 'Organic Social', 'Digital / Web'],
       exclusivityAvailable: true,
-      derivativeWorksAllowed: true,
+      derivativeRightsAllowed: true,
     };
 
     const evalResult = evaluateLicensingCompatibility(briefReqs, creatorTerms);
@@ -39,21 +39,21 @@ export function runLicensingUnitTests(): { name: string; passed: boolean; messag
   // Subtest 2: Territory and Advertising Mismatch Detection
   try {
     const briefReqs: LicensingRequirements = {
-      usageType: 'commercial',
+      commercialScope: 'Commercial Licensed',
       territory: 'Worldwide',
       durationMonths: 12,
-      paidAdvertisingAllowed: true,
-      exclusivityRequired: false,
-      derivativeWorksAllowed: true,
+      channels: ['Paid Advertising'],
+      exclusivity: 'Non-Exclusive',
+      derivativeRights: true,
     };
 
     const creatorTerms: CreatorLicensingTerms = {
-      standardLicense: 'editorial_only',
-      territory: 'India',
-      durationMonths: 3,
-      paidAdvertisingAllowed: false,
+      permittedScope: 'Editorial Only',
+      allowedTerritories: ['Domestic (India)'],
+      maxDurationMonths: 3,
+      allowedChannels: ['Organic Social'],
       exclusivityAvailable: false,
-      derivativeWorksAllowed: false,
+      derivativeRightsAllowed: false,
     };
 
     const evalResult = evaluateLicensingCompatibility(briefReqs, creatorTerms);
@@ -71,12 +71,12 @@ export function runLicensingUnitTests(): { name: string; passed: boolean; messag
   // Subtest 3: Missing Licensing Data mapped to UNKNOWN / NEEDS_REVIEW
   try {
     const briefReqs: LicensingRequirements = {
-      usageType: 'commercial',
+      commercialScope: 'Commercial Licensed',
       territory: 'Worldwide',
       durationMonths: 12,
-      paidAdvertisingAllowed: true,
-      exclusivityRequired: true,
-      derivativeWorksAllowed: true,
+      channels: ['Paid Advertising'],
+      exclusivity: 'Category Exclusive',
+      derivativeRights: true,
     };
 
     // Creator has undefined licensing terms

@@ -808,7 +808,7 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
                   </div>
                   <div className="flex justify-between py-1">
                     <span className="text-zinc-500">Milestones:</span>
-                    <span className="font-mono text-zinc-300">{selectedEngagement.milestones.length} Phases (50% / 50%)</span>
+                    <span className="font-mono text-zinc-300">{(selectedEngagement.milestones?.length || 0)} Phases (50% / 50%)</span>
                   </div>
                 </div>
               </div>

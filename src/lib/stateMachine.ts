@@ -235,3 +235,18 @@ export function getAllowedNextStates(
     .filter(r => r.from.includes(current) && (r.allowedRoles.includes(role) || role === 'system'))
     .map(r => r.to);
 }
+
+export function validateStateTransition(
+  currentOrEng: EngagementStatus | EngagementRecord | { status: EngagementStatus },
+  targetState: EngagementStatus,
+  actorRole: UserRole | 'system',
+  payload?: any
+): { valid: boolean; reason?: string } {
+  const eng = typeof currentOrEng === 'string' ? ({ status: currentOrEng } as EngagementRecord) : (currentOrEng as EngagementRecord);
+  const res = validateEngagementTransition(eng, targetState, actorRole, payload);
+  return { valid: res.allowed, reason: res.error };
+}
+
+export const normalizeEngagementStatus = normalizeLegacyStatus;
+export const VALID_TRANSITIONS = ENGAGEMENT_TRANSITIONS;
+

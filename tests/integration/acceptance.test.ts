@@ -54,20 +54,20 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
   // ==========================================================================
   try {
     const briefReqs: LicensingRequirements = {
-      usageType: 'commercial',
+      commercialScope: 'Commercial Licensed',
       territory: 'Worldwide',
       durationMonths: 12,
-      paidAdvertisingAllowed: true,
-      exclusivityRequired: true,
-      derivativeWorksAllowed: true,
+      channels: ['Paid Advertising', 'Organic Social', 'Digital / Web'],
+      exclusivity: 'Category Exclusive',
+      derivativeRights: true,
     };
     const creatorTerms: CreatorLicensingTerms = {
-      standardLicense: 'editorial_only',
-      territory: 'India',
-      durationMonths: 3,
-      paidAdvertisingAllowed: false,
+      permittedScope: 'Editorial Only',
+      allowedTerritories: ['Domestic (India)'],
+      maxDurationMonths: 3,
+      allowedChannels: ['Organic Social'],
       exclusivityAvailable: false,
-      derivativeWorksAllowed: false,
+      derivativeRightsAllowed: false,
     };
     const evalResult = evaluateLicensingCompatibility(briefReqs, creatorTerms);
     if (evalResult.status !== 'MISMATCH') throw new Error(`Expected MISMATCH, got ${evalResult.status}`);
@@ -87,12 +87,12 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
   // ==========================================================================
   try {
     const briefReqs: LicensingRequirements = {
-      usageType: 'commercial',
+      commercialScope: 'Commercial Licensed',
       territory: 'Worldwide',
       durationMonths: 6,
-      paidAdvertisingAllowed: true,
-      exclusivityRequired: false,
-      derivativeWorksAllowed: true,
+      channels: ['Paid Advertising'],
+      exclusivity: 'Non-Exclusive',
+      derivativeRights: true,
     };
     const evalResult = evaluateLicensingCompatibility(briefReqs, undefined);
     if (evalResult.status !== 'UNKNOWN') throw new Error(`Expected UNKNOWN status, got ${evalResult.status}`);
@@ -113,18 +113,18 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
     const impossibleBrief: Brief = {
       id: 'brief-impossible',
       title: 'Quantum Hologram Broadcast',
+      brandName: 'SciFi Corp',
+      style: 'Sci-Fi Quantum',
+      commercialUse: 'Full Buyout',
       description: 'Requires Quantum Optical Holography on bespoke optical hardware.',
-      brand: 'SciFi Corp',
       budget: '₹5,00,000',
-      category: 'Sci-Fi',
       requiredTools: ['QuantumEngine-X999', 'NonExistentHardwareRenderer'],
       aspectRatio: '1:1',
-      resolution: '16K',
       deadline: '2 hours',
-      status: 'open',
+      status: 'Open',
       createdAt: new Date().toISOString(),
-      proposalsCount: 0,
-      tags: ['QuantumEngine-X999', 'NonExistentHardwareRenderer']
+      contentType: 'Holographic Video',
+      deliverables: ['Hologram Cut']
     };
     const ranked = rankCreatorsForBrief(impossibleBrief, MOCK_CREATORS);
     const top = ranked[0];
@@ -146,15 +146,15 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
   // ==========================================================================
   try {
     const conflictingBriefReqs: LicensingRequirements = {
-      usageType: 'editorial', // Editorial only
+      commercialScope: 'Editorial Only',
       territory: 'Worldwide',
       durationMonths: 12,
-      paidAdvertisingAllowed: true, // But requesting paid advertising!
-      exclusivityRequired: false,
-      derivativeWorksAllowed: false,
+      channels: ['Paid Advertising'],
+      exclusivity: 'Non-Exclusive',
+      derivativeRights: false,
     };
     // Internal conflict between editorial and paid advertising
-    const isInternallyConflicted = conflictingBriefReqs.usageType === 'editorial' && conflictingBriefReqs.paidAdvertisingAllowed;
+    const isInternallyConflicted = conflictingBriefReqs.commercialScope === 'Editorial Only' && conflictingBriefReqs.channels.includes('Paid Advertising');
     if (!isInternallyConflicted) throw new Error('Brief conflict was not detected');
     reports.push({
       id: 'TEST 5',
@@ -224,7 +224,7 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
       brandId: 'user-brand-kaveri',
       brandName: 'Kaveri Creative Studios',
       projectTitle: 'Experimental Music Visualizer',
-      budget: '₹1,50,000',
+      proposedBudget: '₹1,50,000',
       status: 'CREATOR_DECLINED',
       licensingStatus: 'MISMATCH',
       declineReason: 'Schedule fully booked until next quarter.',
@@ -234,8 +234,8 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    saveEngagement(testEng);
-    const retrieved = getEngagementById('eng-test-decline');
+    await saveEngagement(testEng);
+    const retrieved = await getEngagementById('eng-test-decline');
     if (retrieved?.status !== 'CREATOR_DECLINED' || !retrieved.declineReason) {
       throw new Error('Decline state or reason was not persisted');
     }
@@ -255,7 +255,7 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
   try {
     const engId = 'eng-test-versions';
     // Add V1
-    addDeliverableVersion({
+    await addDeliverableVersion({
       id: 'ver-test-1',
       engagementId: engId,
       versionNumber: 1,
@@ -271,7 +271,7 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
     });
 
     // Add Feedback on V1
-    addVersionFeedback({
+    await addVersionFeedback({
       id: 'fb-v1-1',
       engagementId: engId,
       versionId: 'ver-test-1',
@@ -286,7 +286,7 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
     });
 
     // Add V2
-    addDeliverableVersion({
+    await addDeliverableVersion({
       id: 'ver-test-2',
       engagementId: engId,
       versionNumber: 2,
@@ -301,12 +301,13 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
       submittedAt: new Date().toISOString(),
     });
 
-    const allVersions = getDeliverableVersions(engId);
+    const allVersions = await getDeliverableVersions(engId);
     if (allVersions.length !== 2) throw new Error(`Expected 2 versions, found ${allVersions.length}`);
-    if (allVersions[0].versionNumber !== 1 || allVersions[1].versionNumber !== 2) {
+    const vNums = allVersions.map(v => v.versionNumber).sort((a, b) => a - b);
+    if (vNums[0] !== 1 || vNums[1] !== 2) {
       throw new Error('Version ordering or numbers compromised');
     }
-    const v1Feedback = getVersionFeedback('ver-test-1');
+    const v1Feedback = await getVersionFeedback('ver-test-1');
     if (v1Feedback.length !== 1 || !v1Feedback[0].resolved) {
       throw new Error('Version 1 feedback was not correctly preserved and linked');
     }
@@ -331,17 +332,45 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
       height: 1920,
       requiredFormat: 'mp4',
     };
-    // Mock MP4 buffer with horizontal 1920x1080 dimensions
-    const buf = Buffer.alloc(100);
-    // Write fake ftyp
-    buf.writeUInt32BE(16, 0);
-    buf.write('ftyp', 4, 'ascii');
-    buf.write('isom', 8, 'ascii');
+    // Mock genuine MP4 buffer with horizontal 1920x1080 dimensions in tkhd
+    const ftyp = Buffer.alloc(20);
+    ftyp.writeUInt32BE(20, 0);
+    ftyp.write('ftyp', 4, 'ascii');
+    ftyp.write('isom', 8, 'ascii');
+    ftyp.writeUInt32BE(512, 12);
+    ftyp.write('isom', 16, 'ascii');
+
+    const mvhd = Buffer.alloc(108);
+    mvhd.writeUInt32BE(108, 0);
+    mvhd.write('mvhd', 4, 'ascii');
+    mvhd.writeUInt8(0, 8);
+    mvhd.writeUInt32BE(1000, 20);
+    mvhd.writeUInt32BE(10000, 24);
+
+    const tkhd = Buffer.alloc(92);
+    tkhd.writeUInt32BE(92, 0);
+    tkhd.write('tkhd', 4, 'ascii');
+    tkhd.writeUInt8(0, 8);
+    tkhd.writeUInt16BE(1920, 84); // 1920 width
+    tkhd.writeUInt16BE(1080, 88); // 1080 height
+
+    const trak = Buffer.alloc(8 + tkhd.length);
+    trak.writeUInt32BE(trak.length, 0);
+    trak.write('trak', 4, 'ascii');
+    tkhd.copy(trak, 8);
+
+    const moov = Buffer.alloc(8 + mvhd.length + trak.length);
+    moov.writeUInt32BE(moov.length, 0);
+    moov.write('moov', 4, 'ascii');
+    mvhd.copy(moov, 8);
+    trak.copy(moov, 8 + mvhd.length);
+
+    const horizontalBuf = Buffer.concat([ftyp, moov]);
 
     // Run inspection
-    const check = inspectDeliveryAssetBuffer(buf, 'horizontal.mp4', specs, 'v-test-10', 'eng-1');
+    const check = inspectDeliveryAssetBuffer(horizontalBuf, 'horizontal.mp4', specs, 'v-test-10', 'eng-1');
     const arCheck = check.checks.find(c => c.id === 'check-aspect-ratio');
-    if (check.overallStatus === 'PASS') throw new Error('16:9 video should not pass 9:16 specification');
+    if (check.overallStatus === 'PASS' || arCheck?.status === 'PASS') throw new Error('16:9 video should not pass 9:16 specification');
 
     reports.push({
       id: 'TEST 10',
@@ -450,7 +479,7 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
       brandId: 'user-brand-kaveri',
       brandName: 'Kaveri Creative Studios',
       projectTitle: 'Automotive Speed Shoot',
-      budget: '₹2,50,000',
+      proposedBudget: '₹2,50,000',
       status: 'IN_PRODUCTION',
       licensingStatus: 'COMPATIBLE',
       currentVersionNumber: 1,
@@ -459,14 +488,14 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    saveEngagement(baseEng);
+    await saveEngagement(baseEng);
 
     // Simulate update 1 (creator submits revision)
     const update1 = { ...baseEng, status: 'DRAFT_SUBMITTED' as const, currentVersionNumber: 2, updatedAt: new Date().toISOString() };
-    saveEngagement(update1);
+    await saveEngagement(update1);
 
     // Verify stored record reflects update 1
-    const current = getEngagementById('eng-test-concurrent');
+    const current = await getEngagementById('eng-test-concurrent');
     if (current?.currentVersionNumber !== 2 || current?.status !== 'DRAFT_SUBMITTED') {
       throw new Error('State update 1 not persisted');
     }
@@ -511,11 +540,11 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
   // TEST 16 — Data persistence: Briefs, matches, shortlists, engagements, versions persist
   // ==========================================================================
   try {
-    const allEngs = getAllEngagements();
+    const allEngs = await getAllEngagements();
     if (allEngs.length === 0) throw new Error('No engagements in store');
-    const demoEng = getEngagementById('eng-demo-kaveri-novaphone');
+    const demoEng = await getEngagementById('eng-demo-kaveri-novaphone');
     if (!demoEng) throw new Error('Seed demo engagement missing');
-    const demoVersions = getDeliverableVersions('eng-demo-kaveri-novaphone');
+    const demoVersions = await getDeliverableVersions('eng-demo-kaveri-novaphone');
     if (demoVersions.length === 0) throw new Error('Seed deliverable versions missing');
 
     reports.push({
@@ -540,18 +569,17 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
     const freshBrief: Brief = {
       id: 'brief-fresh-zero-state',
       title: 'Zero State Brand Brief',
+      brandName: 'New Brand',
+      style: 'Product Studio',
+      commercialUse: 'Licensed',
       description: 'First brief created on empty marketplace.',
-      brand: 'New Brand',
       budget: '₹1,00,000',
-      category: 'Product',
       requiredTools: ['Flux.1'],
       aspectRatio: '9:16',
-      resolution: '1080x1920',
       deadline: '7 days',
-      status: 'open',
+      status: 'Open',
       createdAt: new Date().toISOString(),
-      proposalsCount: 0,
-      tags: ['Flux.1']
+      contentType: 'Image'
     };
     if (!freshBrief.id || !freshBrief.title) throw new Error('Failed to create fresh brief in zero-state');
 
@@ -587,7 +615,7 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
       brandId: 'user-brand-kaveri',
       brandName: 'Kaveri Creative Studios',
       projectTitle: brief.title,
-      budget: brief.budget,
+      proposedBudget: brief.budget,
       status: 'DISCOVERY',
       licensingStatus: 'COMPATIBLE',
       currentVersionNumber: 0,
@@ -596,7 +624,7 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    saveEngagement(engagement);
+    await saveEngagement(engagement);
 
     // 5. Progression: DISCOVERY -> SHORTLISTED -> CONTACTED -> CREATOR_ACCEPTED -> SCOPE_CONFIRMATION -> LICENSING_REVIEW -> AGREEMENT_CONFIRMED -> IN_PRODUCTION
     const steps: [any, any, any][] = [
@@ -616,7 +644,7 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
     }
 
     // 6. Submit Draft V1
-    addDeliverableVersion({
+    await addDeliverableVersion({
       id: `${engId}-v1`,
       engagementId: engId,
       versionNumber: 1,
@@ -633,7 +661,7 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
 
     // 7. Request Revision
     validateStateTransition('DRAFT_SUBMITTED', 'REVISION_REQUESTED', 'brand');
-    addVersionFeedback({
+    await addVersionFeedback({
       id: `fb-${engId}-1`,
       engagementId: engId,
       versionId: `${engId}-v1`,
@@ -663,24 +691,22 @@ export async function runAcceptanceTests(): Promise<AcceptanceTestReport[]> {
       `${engId}-v2`,
       engId
     );
-    saveDeliveryCheckResult(checkResult);
+    await saveDeliveryCheckResult(checkResult);
 
     // 10. Brand final acceptance
     validateStateTransition('FINAL_REVIEW', 'DELIVERY_APPROVED', 'brand');
     validateStateTransition('DELIVERY_APPROVED', 'COMPLETED', 'brand');
 
     // 11. Audit log entry
-    addAuditLog({
-      id: `audit-${engId}-final`,
-      engagementId: engId,
-      briefId: brief.id,
-      action: 'ENGAGEMENT_COMPLETED',
-      actorId: 'user-brand-kaveri',
-      actorName: 'Kaveri Creative Studios',
-      actorRole: 'brand',
-      timestamp: new Date().toISOString(),
-      details: { finalVersion: 2, deliverableApproved: true, licensingCleared: true }
-    });
+    await addAuditLog(
+      'ENGAGEMENT_COMPLETED',
+      'user-brand-kaveri',
+      'Kaveri Creative Studios',
+      'brand',
+      { finalVersion: 2, deliverableApproved: true, licensingCleared: true },
+      engId,
+      brief.id
+    );
 
     reports.push({
       id: 'TEST 18',

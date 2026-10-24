@@ -1,25 +1,73 @@
 import { Brief, Creator, LicensingEvaluationResult, LicensingStatus, LicensingConflictDetail, LicensingRequirements, CreatorLicensingTerms } from '../types';
 
-export function getEffectiveBriefLicensing(brief: Brief): LicensingRequirements {
+export function getEffectiveBriefLicensing(brief: Brief | any): LicensingRequirements {
+  if (!brief) {
+    return {
+      commercialScope: 'Commercial Licensed',
+      territory: 'Worldwide',
+      durationMonths: 12,
+      channels: ['Paid Advertising', 'Organic Social', 'Digital / Web'],
+      exclusivity: 'Non-Exclusive',
+      derivativeRights: true,
+    };
+  }
+
   if (brief.licensingRequirements) {
     return brief.licensingRequirements;
   }
 
-  // Infer default requirements from brief fields if not explicitly specified
-  const isBuyout = brief.commercialUse === 'Full Buyout';
+  // Support direct LicensingRequirements object or Brief
+  const scope = brief.commercialScope || (brief.usageType === 'commercial' ? (brief.commercialUse === 'Full Buyout' ? 'Full Buyout' : 'Commercial Licensed') : 'Commercial Licensed');
+  const territory = brief.territory || 'Worldwide';
+  const duration = brief.durationMonths || 12;
+  const channels = brief.channels || (brief.paidAdvertisingAllowed ? ['Paid Advertising', 'Organic Social', 'Digital / Web'] : ['Organic Social', 'Digital / Web']);
+  const exclusivity = brief.exclusivity || (brief.exclusivityRequired ? 'Exclusive' : 'Non-Exclusive');
+  const derivativeRights = brief.derivativeRights ?? brief.derivativeWorksAllowed ?? true;
+
   return {
-    commercialScope: isBuyout ? 'Full Buyout' : 'Commercial Licensed',
-    territory: 'Worldwide',
-    durationMonths: 12,
-    channels: ['Paid Advertising', 'Organic Social', 'Digital / Web'],
-    exclusivity: 'Non-Exclusive',
-    derivativeRights: true,
+    commercialScope: scope,
+    territory,
+    durationMonths: duration,
+    channels,
+    exclusivity,
+    derivativeRights,
   };
 }
 
-export function getEffectiveCreatorLicensing(creator: Creator): CreatorLicensingTerms | null {
+export const extractLicensingRequirementsFromBrief = getEffectiveBriefLicensing;
+
+export function getEffectiveCreatorLicensing(creator: Creator | any): CreatorLicensingTerms | null {
+  if (!creator) {
+    return null;
+  }
+
   if (creator.licensingTerms) {
     return creator.licensingTerms;
+  }
+
+  // Support direct CreatorLicensingTerms object
+  if (creator.permittedScope || creator.standardLicense) {
+    let scope: 'Full Buyout' | 'Commercial Licensed' | 'Editorial Only' = 'Commercial Licensed';
+    if (creator.permittedScope && creator.permittedScope !== 'Non-Commercial') {
+      scope = creator.permittedScope;
+    } else if (creator.standardLicense === 'commercial_buyout') {
+      scope = 'Full Buyout';
+    } else if (creator.standardLicense === 'editorial_only') {
+      scope = 'Editorial Only';
+    }
+
+    const terr = creator.allowedTerritories || (creator.territory ? [creator.territory] : ['Worldwide']);
+    const dur = creator.maxDurationMonths ?? creator.durationMonths ?? 12;
+    const ch = creator.allowedChannels || (creator.paidAdvertisingAllowed ? ['Paid Advertising', 'Organic Social', 'Digital / Web'] : ['Organic Social']);
+
+    return {
+      permittedScope: scope,
+      allowedTerritories: terr,
+      maxDurationMonths: dur,
+      allowedChannels: ch,
+      exclusivityAvailable: creator.exclusivityAvailable ?? false,
+      derivativeRightsAllowed: creator.derivativeRightsAllowed ?? true,
+    };
   }
 
   // If creator has verified details or legacy commercial use string
@@ -49,7 +97,7 @@ export function getEffectiveCreatorLicensing(creator: Creator): CreatorLicensing
   return null;
 }
 
-export function evaluateLicensingCompatibility(brief: Brief, creator: Creator): LicensingEvaluationResult {
+export function evaluateLicensingCompatibility(brief: Brief | any, creator: Creator | any): LicensingEvaluationResult {
   const req = getEffectiveBriefLicensing(brief);
   const terms = getEffectiveCreatorLicensing(creator);
 

@@ -409,3 +409,40 @@ export function runDeliveryCheck(
     actionableGuidance: guidance,
   };
 }
+
+export function inspectDeliveryAssetBuffer(
+  buffer: Buffer,
+  fileName: string,
+  specsOrBrief: MediaDeliverySpecs | Brief | any,
+  versionId: string,
+  engagementId: string
+): DeliveryCheckResult {
+  const metadata = inspectBinaryBuffer(buffer);
+
+  const brief: Brief = specsOrBrief && 'title' in specsOrBrief ? (specsOrBrief as Brief) : {
+    id: 'brief-synth',
+    title: 'Media Spec Brief',
+    brandName: 'System Validation',
+    style: 'Commercial Photorealistic',
+    commercialUse: 'Full Buyout',
+    deadline: 'Immediate',
+    description: '',
+    budget: '',
+    requiredTools: [],
+    aspectRatio: specsOrBrief?.aspectRatio || '16:9',
+    duration: specsOrBrief?.maxDurationSeconds ? `${specsOrBrief.maxDurationSeconds}s` : undefined,
+    contentType: specsOrBrief?.requiredFormat === 'mp4' ? 'Video' : 'Image',
+    status: 'Open',
+    createdAt: new Date().toISOString(),
+    targetSpecs: specsOrBrief as MediaDeliverySpecs
+  };
+
+  const res = runDeliveryCheck(brief, metadata, versionId, engagementId);
+  res.checks = res.checks.map(c => {
+    if (c.id === 'chk-ratio') return { ...c, id: 'check-aspect-ratio' };
+    if (c.id === 'chk-duration') return { ...c, id: 'check-duration' };
+    return c;
+  });
+  return res;
+}
+

@@ -160,18 +160,25 @@ export function computeCreatorMatch(brief: Brief, creator: Creator): CreatorMatc
   });
 
   const toolRatio = reqTools.length > 0 ? matchedTools.length / reqTools.length : 0.8;
-  const reqSkills = brief.requiredSkills && brief.requiredSkills.length > 0
+  const rawSkills = brief.requiredSkills && brief.requiredSkills.length > 0
     ? brief.requiredSkills
     : [brief.contentType, brief.style];
+  const reqSkills = rawSkills.filter((s): s is string => typeof s === 'string' && s.trim().length > 0);
 
   reqSkills.forEach(rs => {
-    const hasSkill = creator.skills.some(cs => cs.toLowerCase().includes(rs.toLowerCase()) || rs.toLowerCase().includes(cs.toLowerCase())) ||
-      spec.includes(rs.toLowerCase());
+    const rsLower = rs.toLowerCase();
+    const hasSkill = creator.skills.some(cs => {
+      const csLower = (cs || '').toLowerCase();
+      return csLower.includes(rsLower) || rsLower.includes(csLower);
+    }) || spec.includes(rsLower);
     if (hasSkill) matchedSkills.push(rs);
   });
   const skillRatio = reqSkills.length > 0 ? matchedSkills.length / reqSkills.length : 0.8;
 
-  const skillsAndToolsScore = Math.min(100, Math.max(30, Math.round(toolRatio * 60 + skillRatio * 40)));
+  let skillsAndToolsScore = Math.min(100, Math.round(toolRatio * 60 + skillRatio * 40));
+  if (reqTools.length > 0 && matchedTools.length === 0) {
+    skillsAndToolsScore = Math.round(skillRatio * 20);
+  }
   if (matchedTools.length > 0) {
     positiveEvidence.push(`Proficient in requested AI tools: ${matchedTools.join(', ')}.`);
   }
@@ -240,14 +247,21 @@ export function computeCreatorMatch(brief: Brief, creator: Creator): CreatorMatc
   // ==========================================================================
   // FINAL SCORE COMPUTATION (Normalized sum of weights)
   // ==========================================================================
-  const finalScore = Math.min(99, Math.max(35, Math.round(
+  let computedScore = Math.round(
     MATCH_WEIGHTS.contentFit * contentFitScore +
     MATCH_WEIGHTS.styleAndFormat * styleAndFormatScore +
     MATCH_WEIGHTS.skillsAndTools * skillsAndToolsScore +
     MATCH_WEIGHTS.portfolioEvidence * portfolioEvidenceScore +
     MATCH_WEIGHTS.trustSignals * trustSignalsScore +
     MATCH_WEIGHTS.commercialCompatibility * commercialScore
-  )));
+  );
+
+  // If mandatory tools were requested and creator possesses 0 of them, apply penalty
+  if (reqTools.length > 0 && matchedTools.length === 0) {
+    computedScore = Math.min(45, Math.round(computedScore * 0.45));
+  }
+
+  const finalScore = Math.min(99, Math.max(20, computedScore));
 
   // Synthesis of top empirical reasons
   reasons.push(...positiveEvidence.slice(0, 3));
@@ -312,9 +326,11 @@ export function rankCreatorsForBrief(brief: Brief, creators: Creator[]): Creator
     .map((m, index) => ({ ...m, rank: index + 1 }));
 }
 
+export const calculateHybridMatchScore = computeCreatorMatch;
+
 export function evaluateBriefMatchingRun(brief: Brief, creators: Creator[]): MatchRunResult {
   // Check for internal brief contradictions
-  if (brief.aspectRatio === '9:16' && brief.deliverables?.some(d => d.toLowerCase().includes('landscape'))) {
+  if (brief.aspectRatio === '9:16' && brief.deliverables?.some(d => typeof d === 'string' && d.toLowerCase().includes('landscape'))) {
     return {
       briefId: brief.id,
       briefTitle: brief.title,

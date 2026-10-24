@@ -24,8 +24,8 @@ export function runMatchingUnitTests(): { name: string; passed: boolean; message
     if (score.finalScore < 0 || score.finalScore > 100) {
       throw new Error(`Final score out of bounds: ${score.finalScore}`);
     }
-    const { contentFit, styleAndFormat, skillsAndTools, portfolioEvidence, trustSignals, commercialUse } = score.factorScores;
-    for (const [k, v] of Object.entries({ contentFit, styleAndFormat, skillsAndTools, portfolioEvidence, trustSignals, commercialUse })) {
+    const { contentFit, styleAndFormat, skillsAndTools, portfolioEvidence, trustSignals, commercialCompatibility } = score.factors;
+    for (const [k, v] of Object.entries({ contentFit, styleAndFormat, skillsAndTools, portfolioEvidence, trustSignals, commercialCompatibility })) {
       if (v < 0 || v > 100) throw new Error(`Factor score ${k} out of bounds: ${v}`);
     }
     results.push({ name: 'Factor and hybrid scores normalized strictly between 0 and 100', passed: true });
