@@ -66,7 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#09090B]/95 backdrop-blur-md border-b border-white/10 transition-colors">
+    <header className="sticky top-0 z-40 w-full bg-white/95 dark:bg-[#09090B]/95 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 transition-colors shadow-sm dark:shadow-none">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
@@ -278,16 +278,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <span>Register New Profile</span>
                       </button>
 
-                      <button 
-                        onClick={() => {
-                          onOpenApiConfig();
-                          setProfileOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2 px-3.5 py-1.5 text-zinc-300 hover:text-white hover:bg-zinc-800 text-left font-medium"
-                      >
-                        <Key className="w-3.5 h-3.5 text-zinc-400" />
-                        <span>AI API Keys (Groq / Gemini)</span>
-                      </button>
+                      {currentUser?.role === 'brand' && (
+                        <button 
+                          onClick={() => {
+                            onOpenApiConfig();
+                            setProfileOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-3.5 py-1.5 text-zinc-300 hover:text-white hover:bg-zinc-800 text-left font-medium"
+                        >
+                          <Key className="w-3.5 h-3.5 text-zinc-400" />
+                          <span>AI API Keys (Groq / Gemini)</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="pt-1 border-t border-zinc-800">
@@ -418,15 +420,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 Sync Data
               </button>
-              <button
-                onClick={() => {
-                  onOpenApiConfig();
-                  setMobileMenuOpen(false);
-                }}
-                className="text-zinc-400 hover:text-white"
-              >
-                AI Settings
-              </button>
+              {currentUser?.role === 'brand' && (
+                <button
+                  onClick={() => {
+                    onOpenApiConfig();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-zinc-400 hover:text-white"
+                >
+                  AI Settings
+                </button>
+              )}
             </div>
           </div>
         </div>

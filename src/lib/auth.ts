@@ -55,56 +55,111 @@ export async function signInWithGoogle(): Promise<{ user: FirebaseUser | null; e
 }
 
 /**
- * Create a new user with Email and Password
+ * Create a new user with Email and Password (Dual Firebase + Authoritative Server API)
  */
-export async function signUpWithEmail(email: string, password: string): Promise<{ user: FirebaseUser | null; error: string | null }> {
-  if (!auth) {
-    return { user: null, error: 'Firebase Authentication is not initialized.' };
+export async function signUpWithEmail(
+  email: string, 
+  password: string,
+  extraParams?: { name?: string; role?: UserRole; confirmPassword?: string; companyName?: string; specialization?: string }
+): Promise<{ user: { uid: string; email?: string | null; displayName?: string | null } | null; error: string | null }> {
+  const normEmail = normalizeEmail(email);
+
+  // 1. Try Firebase if configured and online
+  if (auth && process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'demo-api-key') {
+    try {
+      const result = await createUserWithEmailAndPassword(auth, normEmail, password);
+      return { user: result.user, error: null };
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        return { user: null, error: 'An account with this email address already exists.' };
+      }
+      if (err.code === 'auth/weak-password') {
+        return { user: null, error: 'Password should be at least 6 characters long.' };
+      }
+      console.warn('Firebase signup unavailable, falling back to authoritative server API:', err.message);
+    }
   }
 
+  // 2. Authoritative Server API Registration
   try {
-    const normEmail = normalizeEmail(email);
-    const result = await createUserWithEmailAndPassword(auth, normEmail, password);
-    return { user: result.user, error: null };
-  } catch (err: any) {
-    console.warn('Email signup error:', err);
-    let errorMsg = 'Failed to create account.';
-    if (err.code === 'auth/email-already-in-use') {
-      errorMsg = 'An account with this email address already exists.';
-    } else if (err.code === 'auth/weak-password') {
-      errorMsg = 'Password should be at least 6 characters long.';
-    } else if (err.code === 'auth/invalid-email') {
-      errorMsg = 'The provided email address is invalid.';
-    } else if (err.message) {
-      errorMsg = err.message;
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: extraParams?.name || normEmail.split('@')[0],
+        email: normEmail,
+        password,
+        confirmPassword: extraParams?.confirmPassword || password,
+        role: extraParams?.role || 'creator',
+        companyName: extraParams?.companyName,
+        specialization: extraParams?.specialization,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      return { user: null, error: data.error || 'Failed to create account.' };
     }
-    return { user: null, error: errorMsg };
+
+    return {
+      user: {
+        uid: data.user.id,
+        email: data.user.email,
+        displayName: data.user.name,
+      },
+      error: null,
+    };
+  } catch (apiErr: any) {
+    return { user: null, error: apiErr.message || 'Failed to connect to authentication service.' };
   }
 }
 
 /**
- * Sign in existing user with Email and Password
+ * Sign in existing user with Email and Password (Dual Firebase + Authoritative Server API)
  */
-export async function signInWithEmail(email: string, password: string): Promise<{ user: FirebaseUser | null; error: string | null }> {
-  if (!auth) {
-    return { user: null, error: 'Firebase Authentication is not initialized.' };
+export async function signInWithEmail(
+  email: string, 
+  password: string
+): Promise<{ user: { uid: string; email?: string | null; displayName?: string | null } | null; userAccount?: UserAccount; error: string | null }> {
+  const normEmail = normalizeEmail(email);
+
+  // 1. Try Firebase if configured and online
+  if (auth && process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'demo-api-key') {
+    try {
+      const result = await signInWithEmailAndPassword(auth, normEmail, password);
+      return { user: result.user, error: null };
+    } catch (err: any) {
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        return { user: null, error: 'Invalid email or password. Please check your credentials.' };
+      }
+      console.warn('Firebase signin unavailable, falling back to authoritative server API:', err.message);
+    }
   }
 
+  // 2. Authoritative Server API Login
   try {
-    const normEmail = normalizeEmail(email);
-    const result = await signInWithEmailAndPassword(auth, normEmail, password);
-    return { user: result.user, error: null };
-  } catch (err: any) {
-    console.warn('Email signin error:', err);
-    let errorMsg = 'Failed to sign in.';
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-      errorMsg = 'Invalid email or password. Please check your credentials.';
-    } else if (err.code === 'auth/user-disabled') {
-      errorMsg = 'This account has been disabled.';
-    } else if (err.message) {
-      errorMsg = err.message;
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normEmail, password }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      return { user: null, error: data.error || 'Invalid email or password. Please check your credentials.' };
     }
-    return { user: null, error: errorMsg };
+
+    return {
+      user: {
+        uid: data.user.id,
+        email: data.user.email,
+        displayName: data.user.name,
+      },
+      userAccount: data.user,
+      error: null,
+    };
+  } catch (apiErr: any) {
+    return { user: null, error: apiErr.message || 'Failed to connect to authentication service.' };
   }
 }
 

@@ -2,19 +2,64 @@ import { runMatchingUnitTests } from './unit/matching.test';
 import { runLicensingUnitTests } from './unit/licensing.test';
 import { runStateMachineUnitTests } from './unit/stateMachine.test';
 import { runDeliveryCheckUnitTests } from './unit/deliveryCheck.test';
+import { runSearchUnitTests } from './unit/search.test';
+import { runAuthUnitTests } from './unit/auth.test';
+import { runRoleGuardUnitTests } from './unit/roleGuard.test';
 import { runAcceptanceTests } from './integration/acceptance.test';
 
 async function main() {
   console.log('================================================================');
-  console.log('🧪 GenCraft / CreatorMatch-AI: Round 2 Master Test Suite');
+  console.log('🧪 GenCraft / CreatorMatch-AI: Master Refactoring & Acceptance Suite');
   console.log('================================================================\n');
 
   let totalTests = 0;
   let passedTests = 0;
   let failedTests = 0;
 
-  // 1. Matching Unit Tests
-  console.log('--- 1. MATCHING & SCORING ENGINE UNIT TESTS ---');
+  // 1. Natural-Language Search & Semantic Matching Unit Tests (Priority 4)
+  console.log('--- 1. 4-LAYER SEARCH & SEMANTIC DESCRIPTION MATCHING TESTS ---');
+  const searchResults = await runSearchUnitTests();
+  for (const t of searchResults.tests) {
+    totalTests++;
+    if (t.pass) {
+      passedTests++;
+      console.log(`  ✅ [PASS] ${t.name}`);
+    } else {
+      failedTests++;
+      console.error(`  ❌ [FAIL] ${t.name}: ${t.details}`);
+    }
+  }
+
+  // 2. Email-Based Authentication & Session Unit Tests (Priority 2)
+  console.log('\n--- 2. EMAIL AUTHENTICATION, PASSWORD POLICY & SESSION TESTS ---');
+  const authResults = await runAuthUnitTests();
+  for (const t of authResults.tests) {
+    totalTests++;
+    if (t.pass) {
+      passedTests++;
+      console.log(`  ✅ [PASS] ${t.name}`);
+    } else {
+      failedTests++;
+      console.error(`  ❌ [FAIL] ${t.name}: ${t.details}`);
+    }
+  }
+
+  // 3. Brand Role Guard & Secure AI Inference Configuration Tests (Priority 3)
+  console.log('\n--- 3. BRAND ROLE GUARD & SERVER AI CONFIGURATION TESTS ---');
+  const roleGuardResults = await runRoleGuardUnitTests();
+  for (const t of roleGuardResults.tests) {
+    totalTests++;
+    if (t.pass) {
+      passedTests++;
+      console.log(`  ✅ [PASS] ${t.name}`);
+    } else {
+      failedTests++;
+      console.error(`  ❌ [FAIL] ${t.name}: ${t.details}`);
+    }
+  }
+
+  // 4. Matching & Scoring Engine Unit Tests
+  console.log('\n--- 4. MATCHING & SCORING ENGINE UNIT TESTS ---');
   const matchingResults = runMatchingUnitTests();
   for (const r of matchingResults) {
     totalTests++;
@@ -27,8 +72,8 @@ async function main() {
     }
   }
 
-  // 2. Licensing Unit Tests
-  console.log('\n--- 2. LICENSING COMPATIBILITY GATE UNIT TESTS ---');
+  // 5. Licensing Unit Tests
+  console.log('\n--- 5. LICENSING COMPATIBILITY GATE UNIT TESTS ---');
   const licensingResults = runLicensingUnitTests();
   for (const r of licensingResults) {
     totalTests++;
@@ -41,8 +86,8 @@ async function main() {
     }
   }
 
-  // 3. State Machine Unit Tests
-  console.log('\n--- 3. 19-STAGE FSM LIFECYCLE UNIT TESTS ---');
+  // 6. State Machine Unit Tests
+  console.log('\n--- 6. 19-STAGE FSM LIFECYCLE UNIT TESTS ---');
   const stateMachineResults = runStateMachineUnitTests();
   for (const r of stateMachineResults) {
     totalTests++;
@@ -55,8 +100,8 @@ async function main() {
     }
   }
 
-  // 4. Delivery Check Unit Tests
-  console.log('\n--- 4. DELIVERY CHECK ENGINE & MEDIA INSPECTION UNIT TESTS ---');
+  // 7. Delivery Check Unit Tests
+  console.log('\n--- 7. DELIVERY CHECK ENGINE & MEDIA INSPECTION UNIT TESTS ---');
   const deliveryResults = runDeliveryCheckUnitTests();
   for (const r of deliveryResults) {
     totalTests++;
@@ -69,8 +114,8 @@ async function main() {
     }
   }
 
-  // 5. 18 Mandatory Acceptance Tests
-  console.log('\n--- 5. MANDATORY ACCEPTANCE TEST SCENARIOS (TEST 1 - 18) ---');
+  // 8. 18 Mandatory Acceptance Tests
+  console.log('\n--- 8. MANDATORY ACCEPTANCE TEST SCENARIOS (TEST 1 - 18) ---');
   const acceptanceResults = await runAcceptanceTests();
   for (const r of acceptanceResults) {
     totalTests++;

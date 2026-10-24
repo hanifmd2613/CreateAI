@@ -26,6 +26,7 @@ import {
 } from '../data/mockData';
 import { Creator, Brief, PortfolioItem, PageView, UserAccount, UserRole } from '../types';
 import { signOutAuthUser, subscribeToAuthState, fetchUserProfile } from '../lib/auth';
+import { searchCreators, SearchResult } from '../lib/search';
 import { 
   Search, 
   Filter, 
@@ -375,98 +376,45 @@ export default function Home() {
     });
   }, [creators]);
 
-  // Live matching creators in Search Bar Dropdown (only active when searching)
-  const searchDropdownCreators = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return [];
+  // 4-Layer Semantic & Lexical Search Results
+  const searchResults = useMemo(() => {
+    return searchCreators(uniqueCreators, {
+      query: searchQuery,
+      tool: selectedTool,
+      specialization: selectedSpecialization,
+      contentType: selectedContentType,
+      verifiedOnly,
+    });
+  }, [uniqueCreators, searchQuery, selectedTool, selectedSpecialization, selectedContentType, verifiedOnly]);
+
+  const searchResultMap = useMemo(() => {
+    const map = new Map<string, SearchResult>();
+    for (const r of searchResults) {
+      map.set(r.creator.id, r);
     }
-    const q = searchQuery.toLowerCase().trim();
-    return uniqueCreators.filter(c => 
-      c.name.toLowerCase().includes(q) ||
-      c.handle.toLowerCase().includes(q) ||
-      c.specialization.toLowerCase().includes(q) ||
-      c.skills.some(s => s.toLowerCase().includes(q)) ||
-      c.tools.some(t => t.toLowerCase().includes(q)) ||
-      c.location.toLowerCase().includes(q) ||
-      c.bio.toLowerCase().includes(q) ||
-      c.portfolio.some(p => 
-        p.title.toLowerCase().includes(q) || 
-        (p.specificModel && p.specificModel.toLowerCase().includes(q)) || 
-        (p.model && p.model.toLowerCase().includes(q)) ||
-        (p.workflowDescription && p.workflowDescription.toLowerCase().includes(q)) ||
-        (p.client && p.client.toLowerCase().includes(q)) ||
-        (p.promptSnippet && p.promptSnippet.toLowerCase().includes(q))
-      )
-    );
-  }, [uniqueCreators, searchQuery]);
+    return map;
+  }, [searchResults]);
+
+  // Live matching creators in Search Bar Dropdown
+  const searchDropdownCreators = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    return searchResults.slice(0, 5).map(r => r.creator);
+  }, [searchResults, searchQuery]);
 
   // Filtered and Sorted Creators List for the Grid
   const filteredCreators = useMemo(() => {
-    return uniqueCreators
-      .filter((creator) => {
-        // Search query filter
-        if (searchQuery.trim() !== '') {
-          const q = searchQuery.toLowerCase().trim();
-          const matchesName = creator.name.toLowerCase().includes(q);
-          const matchesHandle = creator.handle.toLowerCase().includes(q);
-          const matchesBio = creator.bio.toLowerCase().includes(q);
-          const matchesSpec = creator.specialization.toLowerCase().includes(q);
-          const matchesSkills = creator.skills.some(s => s.toLowerCase().includes(q));
-          const matchesTools = creator.tools.some(t => t.toLowerCase().includes(q));
-          const matchesLocation = creator.location.toLowerCase().includes(q);
-          const matchesPortfolio = creator.portfolio.some(p => 
-            p.title.toLowerCase().includes(q) || 
-            (p.specificModel && p.specificModel.toLowerCase().includes(q)) ||
-            (p.workflowDescription && p.workflowDescription.toLowerCase().includes(q)) ||
-            (p.client && p.client.toLowerCase().includes(q)) ||
-            (p.promptSnippet && p.promptSnippet.toLowerCase().includes(q))
-          );
+    if (searchQuery.trim()) {
+      return searchResults.map(r => r.creator);
+    }
 
-          if (!matchesName && !matchesHandle && !matchesBio && !matchesSpec && !matchesSkills && !matchesTools && !matchesLocation && !matchesPortfolio) {
-            return false;
-          }
-        }
-
-        // Tools filter
-        if (selectedTool !== 'All Tools') {
-          if (!creator.tools.includes(selectedTool)) {
-            return false;
-          }
-        }
-
-        // Content Type filter
-        if (selectedContentType !== 'All Types') {
-          const typeMatch = creator.portfolio.some(item => {
-            if (selectedContentType === 'Video') return item.type === 'video';
-            if (selectedContentType === 'Image') return item.type === 'image';
-            if (selectedContentType === 'Audio') return item.type === 'audio';
-            return true;
-          });
-          if (!typeMatch) return false;
-        }
-
-        // Specialization filter
-        if (selectedSpecialization !== 'All Specializations') {
-          if (creator.specialization !== selectedSpecialization) {
-            return false;
-          }
-        }
-
-        // Verified only filter
-        if (verifiedOnly && !creator.isVerified) {
-          return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'rating') return b.rating - a.rating;
-        if (sortBy === 'projects') return b.completedProjects - a.completedProjects;
-        if (sortBy === 'rate-low') return a.hourlyRate - b.hourlyRate;
-        if (sortBy === 'rate-high') return b.hourlyRate - a.hourlyRate;
-        return 0;
-      });
-  }, [uniqueCreators, searchQuery, selectedTool, selectedContentType, selectedSpecialization, verifiedOnly, sortBy]);
+    return [...searchResults.map(r => r.creator)].sort((a, b) => {
+      if (sortBy === 'rating') return b.rating - a.rating;
+      if (sortBy === 'projects') return b.completedProjects - a.completedProjects;
+      if (sortBy === 'rate-low') return a.hourlyRate - b.hourlyRate;
+      if (sortBy === 'rate-high') return b.hourlyRate - a.hourlyRate;
+      return 0;
+    });
+  }, [searchResults, searchQuery, sortBy]);
 
   // Reset all filters
   const resetFilters = () => {
@@ -530,7 +478,13 @@ export default function Home() {
         onOpenSavedModal={() => setSavedModalOpen(true)}
         currentUser={currentUser}
         onOpenAuthModal={() => setAuthModalOpen(true)}
-        onOpenApiConfig={() => setApiConfigModalOpen(true)}
+        onOpenApiConfig={() => {
+          if (currentUser?.role === 'brand') {
+            setApiConfigModalOpen(true);
+          } else {
+            showToast('AI inference configuration is restricted to Brand accounts.');
+          }
+        }}
         onSyncLiveRealPersons={handleSyncLiveRealPersons}
         isSyncing={isSyncing}
         onLogout={handleLogout}
@@ -657,8 +611,8 @@ export default function Home() {
                 {/* Live Suggestions Dropdown (Only appears when user is actively typing a query, with guaranteed solid opaque background) */}
                 {isSearchFocused && searchQuery.trim().length > 0 && (
                   <div 
-                    className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-[#09090b] border border-zinc-700 shadow-2xl p-4 space-y-3 ring-1 ring-white/10 backdrop-blur-xl"
-                    style={{ zIndex: 9999, backgroundColor: '#09090b' }}
+                    className="absolute top-full left-0 right-0 mt-2 rounded-2xl bg-white dark:bg-[#09090b] border border-zinc-200 dark:border-zinc-700 shadow-2xl p-4 space-y-3 ring-1 ring-zinc-200 dark:ring-white/10 backdrop-blur-xl"
+                    style={{ zIndex: 9999 }}
                     onMouseDown={(e) => e.preventDefault()}
                   >
                     {/* Header */}
@@ -882,6 +836,7 @@ export default function Home() {
                     <CreatorCard
                       key={creator.id}
                       creator={creator}
+                      searchResult={searchQuery.trim() ? searchResultMap.get(creator.id) : undefined}
                       onSelectCreator={handleSelectCreator}
                       onSelectPortfolioItem={handleSelectPortfolioItem}
                       isSaved={savedCreatorIds.includes(creator.id)}
@@ -987,7 +942,7 @@ export default function Home() {
               preselectedCreator={builderTargetCreator}
               groqKey={groqKey}
               geminiKey={geminiKey}
-              onOpenApiConfig={() => setApiConfigModalOpen(true)}
+              onOpenApiConfig={currentUser?.role === 'brand' ? () => setApiConfigModalOpen(true) : undefined}
             />
           </FadeInSection>
         )}
@@ -1055,6 +1010,7 @@ export default function Home() {
       <ApiConfigModal
         isOpen={apiConfigModalOpen}
         onClose={() => setApiConfigModalOpen(false)}
+        currentUser={currentUser}
         groqKey={groqKey}
         geminiKey={geminiKey}
         onSaveKeys={handleSaveApiKeys}

@@ -104,7 +104,7 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
       {/* Profile Header Box */}
       <div 
         onMouseMove={handleCardMouseMove}
-        className="bg-[#121215] rounded-xl border border-white/10 overflow-hidden mb-8 section-glow relative"
+        className="bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/10 overflow-hidden mb-8 section-glow relative"
       >
         
         {/* Cover Image */}
@@ -363,7 +363,7 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
               key={item.id}
               onClick={() => onSelectPortfolioItem(creator, item)}
               onMouseMove={handleCardMouseMove}
-              className="bg-[#121215] rounded-xl border border-white/10 hover:border-white/30 overflow-hidden transition-all cursor-pointer flex flex-col section-glow relative"
+              className="bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/10 hover:border-zinc-300 dark:hover:border-white/30 overflow-hidden transition-all cursor-pointer flex flex-col section-glow relative"
             >
               <div className="relative aspect-video w-full overflow-hidden bg-zinc-950">
                 <img
@@ -408,7 +408,7 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
       {activeTab === 'workflow' && (
         <div 
           onMouseMove={handleCardMouseMove}
-          className="bg-[#121215] rounded-xl border border-white/10 p-6 sm:p-7 space-y-6 section-glow relative"
+          className="bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/10 p-6 sm:p-7 space-y-6 section-glow relative"
         >
           <div>
             <h2 className="text-base font-bold text-white">
@@ -456,7 +456,7 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
                 <div 
                   key={rev.id} 
                   onMouseMove={handleCardMouseMove}
-                  className="bg-[#121215] rounded-xl border border-white/10 p-5 space-y-2.5 section-glow relative"
+                  className="bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/10 p-5 space-y-2.5 section-glow relative"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -487,7 +487,7 @@ export const CreatorProfile: React.FC<CreatorProfileProps> = ({
       {activeTab === 'specs' && (
         <div 
           onMouseMove={handleCardMouseMove}
-          className="bg-[#121215] rounded-xl border border-white/10 p-6 space-y-4 section-glow relative"
+          className="bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-white/10 p-6 space-y-4 section-glow relative"
         >
           <h2 className="text-sm font-semibold text-white">Technical Infrastructure</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">

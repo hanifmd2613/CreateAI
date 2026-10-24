@@ -212,9 +212,22 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
         return;
       }
 
-      // 2. Create Firebase Auth user
-      const { user: fbUser, error: signupError } = await signUpWithEmail(email, password);
-      const uid = fbUser ? fbUser.uid : `user-${Date.now()}`;
+      // 2. Create Auth user via dual Firebase/Server provider
+      const { user: fbUser, error: signupError } = await signUpWithEmail(email, password, {
+        name: name.trim(),
+        role: role,
+        confirmPassword: confirmPassword,
+        companyName: role === 'brand' ? companyName : undefined,
+        specialization: role === 'creator' ? specialization : undefined,
+      });
+
+      if (signupError || !fbUser) {
+        setErrorMsg(signupError || 'Failed to create account.');
+        setIsLoading(false);
+        return;
+      }
+
+      const uid = fbUser.uid;
 
       // 3. Build & Save Authoritative Profile
       const cleanFirstName = name.trim().split(' ')[0] || 'Candidate';
@@ -271,10 +284,16 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
     setIsLoading(true);
 
     try {
-      const { user: fbUser, error } = await signInWithEmail(email, password);
+      const { user: fbUser, userAccount, error } = await signInWithEmail(email, password);
       if (error || !fbUser) {
-        setErrorMsg(error || 'Invalid credentials.');
+        setErrorMsg(error || 'Invalid email or password. Please check your credentials.');
         setIsLoading(false);
+        return;
+      }
+
+      if (userAccount) {
+        playAiVoiceGreeting(userAccount.name.split(' ')[0] || 'User');
+        onAuthSuccess(userAccount);
         return;
       }
 

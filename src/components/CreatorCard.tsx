@@ -12,6 +12,8 @@ import {
   MessageSquare
 } from 'lucide-react';
 
+import { SearchResult } from '../lib/search';
+
 interface CreatorCardProps {
   creator: Creator;
   onSelectCreator: (creator: Creator) => void;
@@ -20,6 +22,7 @@ interface CreatorCardProps {
   onToggleSave: (creatorId: string) => void;
   onHireDirect: (creator: Creator) => void;
   onOpenChat?: (creator: Creator) => void;
+  searchResult?: SearchResult;
 }
 
 export const CreatorCard: React.FC<CreatorCardProps> = ({
@@ -30,6 +33,7 @@ export const CreatorCard: React.FC<CreatorCardProps> = ({
   onToggleSave,
   onHireDirect,
   onOpenChat,
+  searchResult,
 }) => {
   const [showVerifiedTooltip, setShowVerifiedTooltip] = useState(false);
 
@@ -44,7 +48,7 @@ export const CreatorCard: React.FC<CreatorCardProps> = ({
   return (
     <div 
       onMouseMove={handleMouseMove}
-      className="bg-[#121215] rounded-xl border border-zinc-800 section-glow transition-all flex flex-col overflow-hidden"
+      className="bg-white dark:bg-[#121215] rounded-xl border border-zinc-200 dark:border-zinc-800 section-glow transition-all flex flex-col overflow-hidden"
     >
       
       {/* Top Header Section */}
@@ -125,6 +129,27 @@ export const CreatorCard: React.FC<CreatorCardProps> = ({
                 <span>•</span>
                 <span>{creator.location}</span>
               </div>
+
+              {/* Search Relevance & Match Highlight Pill */}
+              {searchResult && searchResult.relevanceScore > 0 && (
+                <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20">
+                      ⚡ {searchResult.relevanceScore}% Match
+                    </span>
+                    {searchResult.licensingCompatibility === 'MISMATCH' && (
+                      <span className="text-[10px] text-amber-500 dark:text-amber-400 font-medium">
+                        ⚠️ Territory Restriction
+                      </span>
+                    )}
+                  </div>
+                  {searchResult.matchHighlights.length > 0 && (
+                    <p className="text-[11px] text-zinc-600 dark:text-zinc-400 line-clamp-1 italic">
+                      {searchResult.matchHighlights[0]}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

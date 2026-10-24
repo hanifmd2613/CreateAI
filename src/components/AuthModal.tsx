@@ -49,6 +49,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [handle, setHandle] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_PRESETS[0]);
   const [companyName, setCompanyName] = useState('');
   
@@ -156,14 +157,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsLoading(true);
 
     try {
-      const { user: fbUser, error } = await signInWithEmail(loginEmail, loginPassword);
+      const { user: fbUser, userAccount, error } = await signInWithEmail(loginEmail, loginPassword);
       if (error || !fbUser) {
-        setErrorMsg(error || 'Invalid credentials.');
+        setErrorMsg(error || 'Invalid credentials. Please check your email and password.');
         setIsLoading(false);
         return;
       }
 
-      const userAcc: UserAccount = {
+      const userAcc: UserAccount = userAccount || {
         id: fbUser.uid,
         name: fbUser.displayName || loginEmail.split('@')[0],
         email: fbUser.email || loginEmail,
@@ -192,16 +193,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+
     if (password.length < 6) {
       setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please verify your password confirmation.');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const { user: fbUser, error } = await signUpWithEmail(email, password);
-      const uid = fbUser ? fbUser.uid : `user-${Date.now()}`;
+      const { user: fbUser, error } = await signUpWithEmail(email, password, {
+        name: name.trim(),
+        role: selectedRole,
+        confirmPassword,
+        companyName: selectedRole === 'brand' ? companyName : undefined,
+        specialization: selectedRole === 'creator' ? specialization : undefined,
+      });
+
+      if (error || !fbUser) {
+        setErrorMsg(error || 'Failed to create account.');
+        setIsLoading(false);
+        return;
+      }
+
+      const uid = fbUser.uid;
 
       const cleanHandle = handle.trim() ? (handle.startsWith('@') ? handle : `@${handle}`) : `@${name.toLowerCase().replace(/\s+/g, '_')}.ai`;
 
@@ -531,16 +556,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Password</label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
-                />
+              {/* Passwords */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-zinc-300 mb-1">Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Min 6 characters"
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-zinc-300 mb-1">Confirm Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat password"
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
+                  />
+                </div>
               </div>
 
               {selectedRole === 'brand' ? (
