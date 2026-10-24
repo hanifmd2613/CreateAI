@@ -69,24 +69,24 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center justify-between h-16">
           
           {/* Left: Clean Brand Logo */}
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6 lg:gap-8">
             <button 
               onClick={() => onNavigate('discovery')}
               className="flex items-center gap-2.5 focus:outline-none group"
             >
-              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-zinc-950 font-black text-sm tracking-tighter">
-                CA
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-zinc-950 font-black text-xs tracking-tight shadow-sm">
+                k.VC
               </div>
               <div className="flex items-baseline gap-1.5">
                 <span className="font-bold text-lg tracking-tight text-white group-hover:text-zinc-200 transition-colors">
-                  CreateAI
+                  kampus<span className="text-emerald-400">.VC</span>
                 </span>
-                <span className="text-[10px] font-medium tracking-wide px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
-                  PRO
+                <span className="text-[10px] font-medium tracking-wide px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                  AI Creator Marketplace
                 </span>
-                <span className="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-medium text-emerald-400">
+                <span className="hidden xl:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-medium text-emerald-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Public Access • Lifetime Free
+                  Round 2 Production
                 </span>
               </div>
             </button>
@@ -95,7 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <nav className="hidden md:flex items-center gap-1">
               <button
                 onClick={() => onNavigate('discovery')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   currentView === 'discovery' || currentView === 'profile'
                     ? 'text-white bg-zinc-800/90'
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
@@ -105,22 +105,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               <button
-                onClick={() => onNavigate('briefs-feed')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  currentView === 'briefs-feed'
+                onClick={() => onNavigate('campaigns')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  currentView === 'campaigns' || currentView === 'campaign-detail' || currentView === 'briefs-feed'
                     ? 'text-white bg-zinc-800/90'
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
                 }`}
               >
-                <span>Campaign Briefs</span>
-                <span className="px-1.5 py-0.2 rounded text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700">
+                <span>Campaigns & Lifecycle</span>
+                <span className="px-1.5 py-0.2 rounded text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700 font-mono">
                   {briefsCount}
                 </span>
               </button>
 
               <button
                 onClick={() => onNavigate('brief-builder')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   currentView === 'brief-builder'
                     ? 'text-white bg-zinc-800/90'
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
@@ -128,6 +128,28 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Post a Brief</span>
+              </button>
+
+              <button
+                onClick={() => onNavigate('creator-studio')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  currentView === 'creator-studio'
+                    ? 'text-white bg-zinc-800/90'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
+                }`}
+              >
+                Creator Studio
+              </button>
+
+              <button
+                onClick={() => onNavigate('analytics')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  currentView === 'analytics'
+                    ? 'text-white bg-zinc-800/90'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
+                }`}
+              >
+                Analytics & ROI
               </button>
             </nav>
           </div>
@@ -334,15 +356,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             onClick={() => {
-              onNavigate('briefs-feed');
+              onNavigate('campaigns');
               setMobileMenuOpen(false);
             }}
             className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between ${
-              currentView === 'briefs-feed' ? 'bg-zinc-800 text-white' : 'text-zinc-400'
+              currentView === 'campaigns' ? 'bg-zinc-800 text-white' : 'text-zinc-400'
             }`}
           >
-            <span>Campaign Briefs</span>
-            <span className="text-[10px] bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400">{briefsCount}</span>
+            <span>Campaigns & Lifecycle</span>
+            <span className="text-[10px] bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-400 font-mono">{briefsCount}</span>
           </button>
           <button
             onClick={() => {
@@ -354,6 +376,28 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             Post a Brief
+          </button>
+          <button
+            onClick={() => {
+              onNavigate('creator-studio');
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium ${
+              currentView === 'creator-studio' ? 'bg-zinc-800 text-white' : 'text-zinc-400'
+            }`}
+          >
+            Creator Studio
+          </button>
+          <button
+            onClick={() => {
+              onNavigate('analytics');
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium ${
+              currentView === 'analytics' ? 'bg-zinc-800 text-white' : 'text-zinc-400'
+            }`}
+          >
+            Analytics & ROI
           </button>
 
           <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs">

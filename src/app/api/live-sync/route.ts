@@ -150,6 +150,20 @@ export async function GET(req: NextRequest) {
         avgTurnaround: template.avgTurnaround,
         availableNow: true,
         isUserCreated: false,
+        supportedPlatforms: ['Instagram', 'YouTube', 'TikTok'],
+        usageTerms: {
+          commercialUseAllowed: true,
+          licensingType: 'Full Buyout',
+          defaultDurationMonths: 12,
+          territory: 'Worldwide',
+          supportedPlatforms: ['Instagram', 'YouTube', 'TikTok'],
+          paidAdvertisingAllowed: true,
+          exclusivityOffered: true,
+          modificationRightsAllowed: true,
+          thirdPartyAssetClearance: true,
+          aiDisclosureCompliance: true,
+          creatorRestrictions: 'Full commercial buyout rights granted upon delivery acceptance.'
+        },
         portfolio: [
           {
             id: `live-port-${id}`,

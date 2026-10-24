@@ -163,6 +163,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         avgTurnaround: '24-48 Hours',
         availableNow: true,
         isUserCreated: true,
+        supportedPlatforms: ['Instagram', 'YouTube', 'TikTok'],
+        usageTerms: {
+          commercialUseAllowed: true,
+          licensingType: 'Full Buyout',
+          defaultDurationMonths: 12,
+          territory: 'Worldwide',
+          supportedPlatforms: ['Instagram', 'YouTube', 'TikTok'],
+          paidAdvertisingAllowed: true,
+          exclusivityOffered: true,
+          modificationRightsAllowed: true,
+          thirdPartyAssetClearance: true,
+          aiDisclosureCompliance: true,
+          creatorRestrictions: 'Standard commercial buyout terms.'
+        },
         portfolio: [
           {
             id: `port-${newUser.id}-1`,

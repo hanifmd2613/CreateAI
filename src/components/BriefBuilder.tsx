@@ -20,6 +20,7 @@ import {
 interface BriefBuilderProps {
   onPublishBrief: (newBrief: Brief) => void;
   onExploreMatchingCreators: (tools: string[]) => void;
+  onViewInCampaignWorkspace?: (brief: Brief) => void;
   initialPrompt?: string;
   preselectedCreator?: Creator | null;
   groqKey?: string;
@@ -28,6 +29,10 @@ interface BriefBuilderProps {
 }
 
 const IDEA_PRESETS = [
+  {
+    label: '✨ Master Skincare UGC Campaign (Official Demo)',
+    prompt: 'We need 5 creators to produce 15-second vertical videos promoting a skincare product. Our total budget is ₹50,000, and the videos must be suitable for paid Instagram advertising in India for 6 months.',
+  },
   {
     label: 'Electric Supercar Commercial',
     prompt: 'High-speed cinematic automotive film of an electric supercar moving through night metropolitan rain with hyperrealistic light reflections and sound design.',
@@ -49,6 +54,7 @@ const IDEA_PRESETS = [
 export const BriefBuilder: React.FC<BriefBuilderProps> = ({
   onPublishBrief,
   onExploreMatchingCreators,
+  onViewInCampaignWorkspace,
   initialPrompt = '',
   preselectedCreator = null,
   groqKey = '',
@@ -81,6 +87,27 @@ export const BriefBuilder: React.FC<BriefBuilderProps> = ({
   // Client-side neural brief synthesizer fallback for guaranteed 100% reliability
   const synthesizeBriefFallback = (prompt: string) => {
     const lower = prompt.toLowerCase();
+    
+    // Official Master Skincare UGC Demo check
+    if (lower.includes('skincare') || lower.includes('pureglow')) {
+      return {
+        title: 'Kaveri PureGlow Skincare — 15s Vertical UGC Video Launch',
+        contentType: 'Social Media Motion',
+        style: 'Minimalist Scandinavian & Macro',
+        aspectRatio: '9:16' as const,
+        commercialUse: 'Full Buyout' as const,
+        budget: '₹50,000',
+        deadline: '5 Days Express',
+        tools: ['Veo', 'Kling', 'Flux.1', 'ElevenLabs'],
+        description: 'Launch campaign for Kaveri PureGlow organic saffron face serum. We need 15-second vertical UGC-style short-form videos with macro texture drops, glowing skin transformation, and clean typography. Target: 5 creators for India Instagram Paid Ads.',
+        deliverables: [
+          'Master 15s Vertical Video (9:16 1080x1920 30fps MP4)',
+          'Clean Cut Video Hook Variant (First 3s Alternate)',
+          '5 High-Res Keyframe Product Stills (Flux.1)',
+          'Signed Commercial IP & Paid Ads Whitelist Release'
+        ],
+      };
+    }
     
     // Content Type
     let generatedContentType = 'AI Commercial Video';
@@ -263,23 +290,73 @@ export const BriefBuilder: React.FC<BriefBuilderProps> = ({
       return;
     }
 
+    const numericBudget = parseInt(budget.replace(/[^\d]/g, '').slice(0, 7) || '50000', 10);
+
     const newBrief: Brief = {
       id: `brief-${Date.now()}`,
       title,
       brandName: 'Kaveri Creative Studios',
       brandAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=120&q=80',
+      campaignObjective: title.includes('Skincare') ? 'Product Launch & Direct-to-Consumer Conversion' : 'High-Impact Brand Campaign',
+      productOrService: title.includes('Skincare') ? 'Kaveri PureGlow Organic Face Serum' : title,
+      targetAudience: 'Digital-first consumers, Tier-1 & Tier-2 India, 18-35',
+      industryNiche: title.includes('Skincare') ? 'Beauty & Personal Care' : 'D2C & Creative E-Commerce',
       contentType,
       style,
       aspectRatio,
       commercialUse,
       budget,
+      budgetMinINR: Math.round(numericBudget * 0.7),
+      budgetMaxINR: numericBudget,
       deadline,
       description,
       requiredTools,
+      requiredSkills: ['Prompt Engineering', 'Motion Interpolation', 'Video Editing'],
+      targetPlatforms: aspectRatio === '9:16' ? ['Instagram', 'YouTube Shorts'] : ['YouTube', 'Instagram'],
+      requiredCreatorsCount: 5,
       deliverables,
+      deliverableSpecs: [
+        {
+          id: `spec-${Date.now()}-1`,
+          title: aspectRatio === '9:16' ? 'Vertical Short-Form Video Master' : 'Primary Master Video Deliverable',
+          format: 'MP4',
+          aspectRatio,
+          width: aspectRatio === '9:16' ? 1080 : 1920,
+          height: aspectRatio === '9:16' ? 1920 : 1080,
+          targetDurationSeconds: 15,
+          durationToleranceSeconds: 2,
+          maxFileSizeBytes: 150 * 1024 * 1024,
+          requiredVariantsCount: 1,
+          isStrict: true,
+        }
+      ],
+      usageRights: {
+        purpose: 'Commercial Brand Campaign',
+        commercialUse: 'Full Buyout',
+        durationMonths: 6,
+        territory: 'India Only',
+        platforms: ['Instagram', 'YouTube Shorts'],
+        paidAdvertisingRequired: true,
+        exclusivityRequired: false,
+        modificationRightsRequired: true,
+        aiDisclosureRequired: true,
+        customTerms: 'All deliveries must be certified for commercial buyout with Indian IP rights clearance.'
+      },
+      mandatoryCriteria: [
+        'Commercial buyout rights must be granted for 6 months',
+        'India territory rights must be confirmed',
+        'Paid advertising authorization on Instagram included'
+      ],
+      preferredAttributes: [
+        'Experience with Veo or Kling models',
+        'Demonstrated vertical video portfolio samples'
+      ],
+      lifecycleStage: 'published',
       status: 'Open',
       createdAt: 'Just now',
-      applicantsCount: 0
+      applicantsCount: 0,
+      shortlistCreatorIds: [],
+      selectedCreatorIds: []
     };
 
     setCreatedBrief(newBrief);
@@ -858,6 +935,19 @@ export const BriefBuilder: React.FC<BriefBuilderProps> = ({
             </div>
 
             <div className="flex flex-col gap-2 pt-1">
+              {onViewInCampaignWorkspace && (
+                <button
+                  onClick={() => {
+                    setPublishedSuccess(false);
+                    onViewInCampaignWorkspace(createdBrief);
+                  }}
+                  className="w-full py-2.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-zinc-950 font-semibold text-xs transition-colors shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-zinc-950" />
+                  <span>Launch Campaign Lifecycle & Match Creators</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   setPublishedSuccess(false);

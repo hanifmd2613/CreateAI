@@ -155,6 +155,20 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
           hourlyRate: 8500,
           avgTurnaround: '48 Hours',
           availableNow: true,
+          supportedPlatforms: ['Instagram', 'YouTube', 'TikTok'],
+          usageTerms: {
+            commercialUseAllowed: true,
+            licensingType: 'Full Buyout',
+            defaultDurationMonths: 12,
+            territory: 'Worldwide',
+            supportedPlatforms: ['Instagram', 'YouTube', 'TikTok'],
+            paidAdvertisingAllowed: true,
+            exclusivityOffered: true,
+            modificationRightsAllowed: true,
+            thirdPartyAssetClearance: true,
+            aiDisclosureCompliance: true,
+            creatorRestrictions: 'Standard commercial buyout terms.'
+          },
           portfolio: [
             {
               id: `port-${Date.now()}-1`,

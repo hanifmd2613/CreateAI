@@ -6,6 +6,9 @@ import { CreatorCard } from '../components/CreatorCard';
 import { CreatorProfile } from '../components/CreatorProfile';
 import { BriefBuilder } from '../components/BriefBuilder';
 import { BriefsFeed } from '../components/BriefsFeed';
+import { CampaignWorkspace } from '../components/CampaignWorkspace';
+import { CreatorDashboardView } from '../components/CreatorDashboardView';
+import { AnalyticsDashboardView } from '../components/AnalyticsDashboardView';
 import { PortfolioModal } from '../components/PortfolioModal';
 import { HireModal } from '../components/HireModal';
 import { SavedModal } from '../components/SavedModal';
@@ -18,11 +21,26 @@ import { FadeInSection } from '../components/FadeInSection';
 import { 
   MOCK_CREATORS, 
   INITIAL_BRIEFS, 
+  INITIAL_DELIVERABLES,
+  INITIAL_ENGAGEMENTS,
+  INITIAL_ANALYTICS,
   TOOL_OPTIONS, 
   CONTENT_TYPE_OPTIONS, 
   SPECIALIZATION_OPTIONS 
 } from '../data/mockData';
-import { Creator, Brief, PortfolioItem, PageView, UserAccount, UserRole } from '../types';
+import { 
+  Creator, 
+  Brief, 
+  PortfolioItem, 
+  PageView, 
+  UserAccount, 
+  UserRole,
+  CampaignDeliverable,
+  CreatorEngagement,
+  PlatformAnalytics,
+  DeliverableVersion,
+  VersionComment
+} from '../types';
 import { 
   Search, 
   Filter, 
@@ -81,6 +99,12 @@ export default function Home() {
   const [creators, setCreators] = useState<Creator[]>(MOCK_CREATORS);
   const [briefs, setBriefs] = useState<Brief[]>(INITIAL_BRIEFS);
   const [savedCreatorIds, setSavedCreatorIds] = useState<string[]>(['creator-1', 'creator-3']);
+
+  // Round 2: Campaign Lifecycle, Deliverables, Engagements & Analytics State
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('brief-skincare-demo');
+  const [deliverables, setDeliverables] = useState<CampaignDeliverable[]>(INITIAL_DELIVERABLES);
+  const [engagements, setEngagements] = useState<CreatorEngagement[]>(INITIAL_ENGAGEMENTS);
+  const [analyticsData, setAnalyticsData] = useState<PlatformAnalytics>(INITIAL_ANALYTICS);
 
   // Authentication Gate State (Website starts from login page first)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -323,7 +347,8 @@ export default function Home() {
   // Publish New Brief from Builder
   const handlePublishBrief = (newBrief: Brief) => {
     setBriefs([newBrief, ...briefs]);
-    showToast(`Campaign Brief "${newBrief.title}" published with commercial buyout clearance!`);
+    setSelectedCampaignId(newBrief.id);
+    showToast(`Campaign Brief "${newBrief.title}" published! Launching lifecycle workspace.`);
   };
 
   // Direct Hire Modal trigger
@@ -495,6 +520,60 @@ export default function Home() {
         onOpenChat={() => handleOpenChat()}
         onOpenSystemAssistant={() => setSystemAssistantOpen(true)}
       />
+
+      {/* Master Skincare UGC Demo Interactive Quick-Bar */}
+      <div className="bg-gradient-to-r from-emerald-950/40 via-zinc-900 to-zinc-950 border-b border-emerald-500/20 px-4 sm:px-6 lg:px-8 py-2.5 relative z-20">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-white tracking-tight">kampus.VC Demo Suite:</span>
+              <span className="text-zinc-300">
+                Kaveri PureGlow Skincare Launch (<span className="text-emerald-400 font-medium">₹50,000</span> • 5 Creators • 15s 9:16 UGC Video • India Paid Ads)
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => {
+                setSelectedCampaignId('brief-skincare-demo');
+                setCurrentView('campaigns');
+              }}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                currentView === 'campaigns'
+                  ? 'bg-emerald-400 text-zinc-950 font-semibold shadow-sm'
+                  : 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>⚡ Campaign Lifecycle & Matching</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentView('creator-studio')}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                currentView === 'creator-studio'
+                  ? 'bg-white text-zinc-950 font-semibold'
+                  : 'bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-750 border border-zinc-700'
+              }`}
+            >
+              🧑‍🎨 Creator Studio
+            </button>
+
+            <button
+              onClick={() => setCurrentView('analytics')}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                currentView === 'analytics'
+                  ? 'bg-white text-zinc-950 font-semibold'
+                  : 'bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-750 border border-zinc-700'
+              }`}
+            >
+              📊 Pilot Telemetry & ROI
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Main View Router */}
       <main className="flex-1 pb-16 relative z-10">
@@ -941,6 +1020,10 @@ export default function Home() {
             <BriefBuilder
               onPublishBrief={handlePublishBrief}
               onExploreMatchingCreators={handleExploreMatchingCreators}
+              onViewInCampaignWorkspace={(newBrief) => {
+                setSelectedCampaignId(newBrief.id);
+                setCurrentView('campaigns');
+              }}
               initialPrompt={builderInitialPrompt}
               preselectedCreator={builderTargetCreator}
               groqKey={groqKey}
@@ -961,6 +1044,104 @@ export default function Home() {
                 setCurrentView('brief-builder');
               }}
               onExploreMatchingCreators={handleExploreMatchingCreators}
+            />
+          </FadeInSection>
+        )}
+
+        {/* VIEW 5: CAMPAIGNS & LIFECYCLE WORKSPACE */}
+        {(currentView === 'campaigns' || currentView === 'campaign-detail') && (
+          <FadeInSection delayMs={20} className="w-full">
+            <CampaignWorkspace
+              campaigns={briefs}
+              currentCampaign={briefs.find(b => b.id === selectedCampaignId) || briefs[0]}
+              onSelectCampaign={(brief) => setSelectedCampaignId(brief.id)}
+              creators={creators}
+              deliverables={deliverables}
+              onUpdateDeliverables={(updated) => {
+                setDeliverables(updated);
+                showToast('Deliverables workspace updated.');
+              }}
+              engagements={engagements}
+              onUpdateEngagements={(updated) => {
+                setEngagements(updated);
+                showToast('Creator engagements updated.');
+              }}
+              onUpdateCampaign={(updated) => {
+                setBriefs(briefs.map(b => b.id === updated.id ? updated : b));
+                showToast(`Campaign "${updated.title}" updated.`);
+              }}
+              onNavigateToBuilder={() => {
+                setBuilderInitialPrompt('');
+                setBuilderTargetCreator(null);
+                setCurrentView('brief-builder');
+              }}
+              onSelectCreatorProfile={(creator) => {
+                setSelectedCreator(creator);
+                setCurrentView('profile');
+              }}
+              onOpenChat={(creator) => handleOpenChat(creator)}
+              currentUserRole={currentUser?.role || 'brand'}
+              currentUserName={currentUser?.name || 'Kaveri Creative Studios'}
+            />
+          </FadeInSection>
+        )}
+
+        {/* VIEW 6: CREATOR STUDIO VIEW */}
+        {currentView === 'creator-studio' && (
+          <FadeInSection delayMs={20} className="w-full">
+            <CreatorDashboardView
+              creator={creators.find(c => c.id === 'creator-1') || creators[0]}
+              briefs={briefs}
+              deliverables={deliverables}
+              engagements={engagements}
+              onAcceptInvitation={(campaignId) => {
+                const eng = engagements.find(e => e.campaignId === campaignId && e.creatorId === 'creator-1');
+                if (eng) {
+                  setEngagements(engagements.map(e => e.id === eng.id ? { ...e, status: 'accepted' } : e));
+                  showToast('Campaign opportunity accepted! Commercial terms confirmed.');
+                } else {
+                  const creatorObj = creators.find(c => c.id === 'creator-1') || creators[0];
+                  const newEng: CreatorEngagement = {
+                    id: `eng-accept-${Date.now()}`,
+                    campaignId,
+                    creatorId: 'creator-1',
+                    creator: creatorObj,
+                    status: 'accepted',
+                    agreedFeeINR: 10000,
+                    rightsConfirmed: true,
+                    rightsConfirmedAt: new Date().toISOString(),
+                    invitationSentAt: new Date().toISOString(),
+                    responseReceivedAt: new Date().toISOString(),
+                    paymentStatus: 'Escrow Funded',
+                    notes: 'Accepted via Creator Studio with commercial usage confirmed.'
+                  };
+                  setEngagements([...engagements, newEng]);
+                  showToast('Campaign opportunity accepted! Commercial terms confirmed.');
+                }
+              }}
+              onDeclineInvitation={(campaignId) => {
+                const eng = engagements.find(e => e.campaignId === campaignId && e.creatorId === 'creator-1');
+                if (eng) {
+                  setEngagements(engagements.map(e => e.id === eng.id ? { ...e, status: 'declined' } : e));
+                  showToast('Campaign opportunity declined.');
+                }
+              }}
+              onNavigateToDeliverable={(campaignId) => {
+                setSelectedCampaignId(campaignId);
+                setCurrentView('campaigns');
+              }}
+              onOpenChat={(creator) => {
+                handleOpenChat(creator);
+              }}
+            />
+          </FadeInSection>
+        )}
+
+        {/* VIEW 7: ANALYTICS & PILOT TELEMETRY */}
+        {currentView === 'analytics' && (
+          <FadeInSection delayMs={20} className="w-full">
+            <AnalyticsDashboardView
+              analytics={analyticsData}
             />
           </FadeInSection>
         )}
@@ -1057,20 +1238,21 @@ export default function Home() {
       <footer className="border-t border-zinc-850 bg-zinc-950 py-8 text-xs text-zinc-500 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-5 h-5 rounded bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center justify-center font-bold text-[10px]">
-              CA
+            <div className="w-6 h-6 rounded bg-zinc-800 text-zinc-200 border border-zinc-700 flex items-center justify-center font-bold text-[10px]">
+              k.VC
             </div>
-            <span className="font-semibold text-zinc-200 text-xs">CreateAI</span>
+            <span className="font-semibold text-zinc-200 text-xs">kampus.VC</span>
             <span className="text-zinc-700">•</span>
-            <span>Enterprise Generative AI Creator Platform</span>
+            <span>AI Content Creator Marketplace & Campaign Lifecycle Platform</span>
           </div>
-          <div className="flex items-center gap-5 text-xs text-zinc-400">
-            <button onClick={() => setCurrentView('discovery')} className="hover:text-white transition-colors">Discover</button>
-            <button onClick={() => setCurrentView('brief-builder')} className="hover:text-white transition-colors">Brief Co-Pilot</button>
-            <button onClick={() => setCurrentView('briefs-feed')} className="hover:text-white transition-colors">Campaign Briefs</button>
-            <button onClick={() => handleOpenChat()} className="hover:text-white transition-colors">Direct Messages</button>
+          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400">
+            <button onClick={() => setCurrentView('discovery')} className="hover:text-white transition-colors">Discover Creators</button>
+            <button onClick={() => setCurrentView('campaigns')} className="hover:text-white transition-colors">Campaigns</button>
+            <button onClick={() => setCurrentView('brief-builder')} className="hover:text-white transition-colors">Post Brief</button>
+            <button onClick={() => setCurrentView('creator-studio')} className="hover:text-white transition-colors">Creator Studio</button>
+            <button onClick={() => setCurrentView('analytics')} className="hover:text-white transition-colors">Analytics & ROI</button>
             <button onClick={() => setSystemAssistantOpen(true)} className="hover:text-emerald-400 transition-colors">AI Assistant</button>
-            <span className="text-zinc-600">© 2025 CreateAI</span>
+            <span className="text-zinc-600">© 2025 kampus.VC</span>
           </div>
         </div>
       </footer>
