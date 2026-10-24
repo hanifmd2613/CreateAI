@@ -140,6 +140,10 @@ export async function registerUser(params: {
     return { success: false, error: 'A valid email address is required.' };
   }
 
+  if (role !== 'creator' && role !== 'brand') {
+    return { success: false, error: 'Invalid account role. Allowed registration roles are "creator" or "brand".' };
+  }
+
   const passCheck = validatePasswordPolicy(password);
   if (!passCheck.valid) {
     return { success: false, error: passCheck.reason };

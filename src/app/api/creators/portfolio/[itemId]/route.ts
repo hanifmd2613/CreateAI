@@ -103,18 +103,26 @@ export async function DELETE(
       }, { status: 503 });
     }
 
-    const updated = await CreatorModel.findOneAndUpdate(
-      { id: user.id },
-      { $pull: { portfolio: { id: itemId } } },
-      { new: true }
-    );
-
-    if (!updated) {
+    const creator = await CreatorModel.findOne({ id: user.id }).lean();
+    if (!creator) {
       return NextResponse.json({
         success: false,
         error: { code: 'NOT_FOUND', message: `Creator profile "${user.id}" not found.` }
       }, { status: 404 });
     }
+
+    const hasItem = Array.isArray(creator.portfolio) && creator.portfolio.some((p: any) => p.id === itemId);
+    if (!hasItem) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: `Portfolio item "${itemId}" not found in your portfolio.` }
+      }, { status: 404 });
+    }
+
+    await CreatorModel.findOneAndUpdate(
+      { id: user.id },
+      { $pull: { portfolio: { id: itemId } } }
+    );
 
     return NextResponse.json({
       success: true,

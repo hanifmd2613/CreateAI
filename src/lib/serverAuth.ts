@@ -32,15 +32,15 @@ export async function getAuthenticatedUser(req: NextRequest): Promise<UserAccoun
       if (syncUser) return syncUser;
     }
 
-    // 3. Check x-user-id header (for authenticated testing / proxy context)
+    // 3. Check x-user-id header (strictly restricted to non-production test/proxy context)
     const headerUserId = req.headers.get('x-user-id');
-    if (headerUserId) {
+    if (headerUserId && process.env.NODE_ENV !== 'production') {
       const user = await getUserByIdAsync(headerUserId);
       if (user) return user;
       const syncUser = getUserById(headerUserId);
       if (syncUser) return syncUser;
 
-      // If user id is a creator ID like 'creator-1' or 'creator-2'
+      // If user id is a creator ID like 'creator-1' or 'creator-2' in tests
       return {
         id: headerUserId,
         name: headerUserId,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getEngagementById, updateEngagement, atomicTransitionEngagement, recordAudit } from '@/lib/engagementStore';
 import { validateEngagementTransition } from '@/lib/stateMachine';
 import { EngagementStatus, UserRole } from '@/types';
+import { verifyServerAuth } from '@/lib/serverAuth';
 
 export async function POST(
   req: NextRequest,
@@ -10,11 +11,18 @@ export async function POST(
   try {
     const { id } = params;
     const body = await req.json();
+    const authResult = await verifyServerAuth(req);
 
     const targetState: EngagementStatus = body.targetState;
-    const actorRole: UserRole | 'system' = body.actorRole || 'brand';
-    const actorId: string = body.actorId || 'user-default';
-    const actorName: string = body.actorName || 'Authorized User';
+    let actorRole: UserRole | 'system' = body.actorRole || 'brand';
+    let actorId: string = body.actorId || 'user-default';
+    let actorName: string = body.actorName || 'Authorized User';
+
+    if (authResult.isAuthenticated && authResult.user) {
+      actorRole = authResult.user.role;
+      actorId = authResult.user.id;
+      actorName = authResult.user.name;
+    }
 
     if (!targetState) {
       return NextResponse.json({

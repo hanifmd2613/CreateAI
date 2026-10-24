@@ -5,7 +5,12 @@ import { BriefModel } from '../../src/lib/models/Brief';
 import { CreatorModel } from '../../src/lib/models/Creator';
 import { UserModel } from '../../src/lib/models/User';
 import { EngagementModel } from '../../src/lib/models/Engagement';
-import { Brief } from '../../src/types';
+import { saveEngagement } from '../../src/lib/engagementStore';
+import { NextRequest } from 'next/server';
+import { GET as getEngagementHandler } from '../../src/app/api/engagements/[id]/route';
+import { DELETE as deletePortfolioItemHandler } from '../../src/app/api/creators/portfolio/[itemId]/route';
+import { POST as uploadHandler } from '../../src/app/api/upload/route';
+import { Brief, EngagementRecord } from '../../src/types';
 
 export interface TestResult {
   name: string;
@@ -254,6 +259,127 @@ export async function runFirebaseBriefAssignmentTests(): Promise<{ tests: TestRe
   } catch (e: any) {
     tests.push({
       name: 'Brief reload durability test',
+      pass: false,
+      details: e.message
+    });
+  }
+
+  // =========================================================================
+  // TEST 7: Role Escalation Rejection (Prevent unauthorized admin registration)
+  // =========================================================================
+  try {
+    const adminAttempt = await registerUser({
+      name: 'Malicious Attacker',
+      email: `attacker.${timestamp}@gencraft.ai`,
+      password: 'SecurePassword123!',
+      role: 'admin' as any,
+    });
+
+    const pass = adminAttempt.success === false && Boolean(adminAttempt.error?.includes('role'));
+    tests.push({
+      name: 'Role Escalation Defense: Public registration cannot grant privileged administrative roles',
+      pass,
+      details: adminAttempt.error || 'Failed to reject admin role'
+    });
+  } catch (e: any) {
+    tests.push({
+      name: 'Role escalation defense test',
+      pass: false,
+      details: e.message
+    });
+  }
+
+  // =========================================================================
+  // TEST 8: Participant Isolation on Engagement Routes
+  // =========================================================================
+  try {
+    const testEngId = `eng_isolation_${timestamp}`;
+    const targetCreatorId = `creator_alpha_${timestamp}`;
+    const unrelatedCreatorId = `creator_beta_${timestamp}`;
+    const authorBrandId = `brand_prime_${timestamp}`;
+
+    const newEng: EngagementRecord = {
+      id: testEngId,
+      brandId: authorBrandId,
+      brandName: 'Prime Media',
+      creatorId: targetCreatorId,
+      creatorName: 'Creator Alpha',
+      projectTitle: 'Confidential VR Experience',
+      proposedBudget: '₹1,50,000',
+      status: 'CONTACTED',
+      licensingStatus: 'COMPATIBLE',
+      currentVersionNumber: 0,
+      maxRevisions: 2,
+      revisionsUsed: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await saveEngagement(newEng);
+
+    // Unrelated creator calls GET /api/engagements/[id]
+    const unauthReq = new NextRequest(`http://localhost:3000/api/engagements/${testEngId}`, {
+      headers: { 'x-user-id': unrelatedCreatorId }
+    });
+    const res = await getEngagementHandler(unauthReq, { params: { id: testEngId } });
+
+    const pass = res.status === 403;
+    tests.push({
+      name: 'Participant Isolation: Unrelated creator is rejected with 403 Forbidden on private engagement details',
+      pass,
+      details: `HTTP Status: ${res.status}`
+    });
+  } catch (e: any) {
+    tests.push({
+      name: 'Participant engagement isolation test',
+      pass: false,
+      details: e.message
+    });
+  }
+
+  // =========================================================================
+  // TEST 9: Portfolio Deletion Honesty (Non-existent item returns 404, not false success)
+  // =========================================================================
+  try {
+    const req = new NextRequest(`http://localhost:3000/api/creators/portfolio/non_existent_item_999`, {
+      method: 'DELETE',
+      headers: { 'x-user-id': testFirebaseUid }
+    });
+    const res = await deletePortfolioItemHandler(req, { params: { itemId: 'non_existent_item_999' } });
+
+    const pass = res.status === 404;
+    tests.push({
+      name: 'Portfolio Deletion Honesty: Attempting to delete non-existent item returns 404 NOT_FOUND instead of false success',
+      pass,
+      details: `HTTP Status: ${res.status}`
+    });
+  } catch (e: any) {
+    tests.push({
+      name: 'Portfolio deletion honesty test',
+      pass: false,
+      details: e.message
+    });
+  }
+
+  // =========================================================================
+  // TEST 10: Unauthenticated Media Upload Protection
+  // =========================================================================
+  try {
+    const unauthUploadReq = new NextRequest(`http://localhost:3000/api/upload`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ externalUrl: 'https://example.com/asset.mp4' })
+    });
+    const res = await uploadHandler(unauthUploadReq);
+
+    const pass = res.status === 401;
+    tests.push({
+      name: 'Media Upload Security Gate: Unauthenticated upload requests are strictly rejected with 401 UNAUTHORIZED',
+      pass,
+      details: `HTTP Status: ${res.status}`
+    });
+  } catch (e: any) {
+    tests.push({
+      name: 'Unauthenticated upload protection test',
       pass: false,
       details: e.message
     });

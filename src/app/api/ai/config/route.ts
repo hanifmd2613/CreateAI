@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveBrandAiKeys, getBrandAiKeys, maskApiKey } from '@/lib/aiConfigStore';
+import { getAuthenticatedUser } from '@/lib/serverAuth';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const brandId = searchParams.get('brandId') || 'user-brand-kaveri';
-    const role = req.headers.get('x-user-role') || searchParams.get('role');
+    const authUser = await getAuthenticatedUser(req);
+    const brandId = authUser?.id || searchParams.get('brandId') || 'user-brand-kaveri';
+    const role = authUser?.role || req.headers.get('x-user-role') || searchParams.get('role');
 
     // STRICT ROLE GUARD: Creators are blocked from reading AI config
     if (role === 'creator') {
@@ -34,9 +36,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser(req);
     const body = await req.json();
-    const { brandId = 'user-brand-kaveri', role, groqKey, geminiKey } = body;
-    const headerRole = req.headers.get('x-user-role') || role;
+    const { brandId = authUser?.id || 'user-brand-kaveri', role, groqKey, geminiKey } = body;
+    const headerRole = authUser?.role || req.headers.get('x-user-role') || role;
 
     // STRICT ROLE GUARD: Creators are blocked from updating AI config
     if (headerRole === 'creator') {

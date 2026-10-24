@@ -54,6 +54,14 @@ function validateFileSignature(buffer: Buffer, mimeType: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthenticatedUser(req);
+    if (!user) {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required to upload media assets.' }
+      }, { status: 401 });
+    }
+
     const contentType = req.headers.get('content-type') || '';
 
     // Handle External URL Registration via JSON

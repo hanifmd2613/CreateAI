@@ -9,6 +9,7 @@ import {
 import { connectToDatabase } from '@/lib/mongodb';
 import { BriefModel } from '@/lib/models/Brief';
 import { INITIAL_BRIEFS } from '@/data/mockData';
+import { verifyServerAuth } from '@/lib/serverAuth';
 
 export async function GET(
   req: NextRequest,
@@ -23,6 +24,19 @@ export async function GET(
         success: false,
         error: { code: 'NOT_FOUND', message: `Engagement with ID "${id}" was not found.` }
       }, { status: 404 });
+    }
+
+    // Participant Authorization: verify caller is brand or creator participant
+    const authResult = await verifyServerAuth(req);
+    if (authResult.isAuthenticated && authResult.user) {
+      const isBrand = engagement.brandId === authResult.user.id;
+      const isCreator = engagement.creatorId === authResult.user.id || engagement.creatorId === (authResult.user as any).creatorProfileId;
+      if (!isBrand && !isCreator) {
+        return NextResponse.json({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Forbidden: You are not an authorized participant in this engagement.' }
+        }, { status: 403 });
+      }
     }
 
     let brief = null;

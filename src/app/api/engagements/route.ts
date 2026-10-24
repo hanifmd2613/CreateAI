@@ -20,9 +20,13 @@ export async function GET(req: NextRequest) {
 
     if (authResult.isAuthenticated && authResult.user) {
       if (authResult.user.role === 'creator') {
-        creatorId = creatorId || (authResult.user as any).creatorProfileId || authResult.user.id;
+        // Enforce participant boundary: creators only see their own engagements
+        creatorId = (authResult.user as any).creatorProfileId || authResult.user.id;
+        brandId = undefined;
       } else if (authResult.user.role === 'brand') {
-        brandId = brandId || authResult.user.id;
+        // Enforce participant boundary: brands only see their own engagements
+        brandId = authResult.user.id;
+        creatorId = undefined;
       }
     }
 
@@ -38,6 +42,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await verifyServerAuth(req);
     const body = await req.json();
 
     if (!body.creatorId || !body.projectTitle) {
@@ -45,6 +50,20 @@ export async function POST(req: NextRequest) {
         success: false,
         error: { code: 'VALIDATION_ERROR', message: 'creatorId and projectTitle are required.' }
       }, { status: 400 });
+    }
+
+    let brandId = body.brandId || 'user-brand-kaveri';
+    let brandName = body.brandName || 'Kaveri Creative Studios';
+
+    if (authResult.isAuthenticated && authResult.user) {
+      if (authResult.user.role === 'creator') {
+        return NextResponse.json({
+          success: false,
+          error: { code: 'FORBIDDEN', message: 'Only brand accounts can initiate engagement proposals.' }
+        }, { status: 403 });
+      }
+      brandId = authResult.user.id;
+      brandName = authResult.user.companyName || authResult.user.name;
     }
 
     // Attempt to resolve brief and creator to determine initial licensing status
@@ -72,8 +91,8 @@ export async function POST(req: NextRequest) {
     const engagement: EngagementRecord = {
       id: body.id || `eng-${Date.now()}`,
       briefId: body.briefId || undefined,
-      brandId: body.brandId || 'user-brand-kaveri',
-      brandName: body.brandName || 'Kaveri Creative Studios',
+      brandId,
+      brandName,
       brandAvatar: body.brandAvatar || 'https://api.dicebear.com/7.x/identicon/svg?seed=KaveriStudios',
       creatorId: body.creatorId,
       creatorName: body.creatorName || (creator ? creator.name : 'Target Creator'),
