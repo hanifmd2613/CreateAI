@@ -65,10 +65,11 @@ export async function signUpWithEmail(
   const normEmail = normalizeEmail(email);
 
   // 1. Try Firebase if configured and online
+  let fbUid: string | undefined = undefined;
   if (auth && process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'demo-api-key') {
     try {
       const result = await createUserWithEmailAndPassword(auth, normEmail, password);
-      return { user: result.user, error: null };
+      fbUid = result.user.uid;
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
         return { user: null, error: 'An account with this email address already exists.' };
@@ -76,16 +77,17 @@ export async function signUpWithEmail(
       if (err.code === 'auth/weak-password') {
         return { user: null, error: 'Password should be at least 6 characters long.' };
       }
-      console.warn('Firebase signup unavailable, falling back to authoritative server API:', err.message);
+      console.warn('Firebase signup unavailable, continuing to authoritative server API:', err.message);
     }
   }
 
-  // 2. Authoritative Server API Registration
+  // 2. Authoritative Server API Registration (synchronizes with MongoDB and sets session cookie)
   try {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        id: fbUid,
         name: extraParams?.name || normEmail.split('@')[0],
         email: normEmail,
         password,
@@ -126,8 +128,7 @@ export async function signInWithEmail(
   // 1. Try Firebase if configured and online
   if (auth && process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'demo-api-key') {
     try {
-      const result = await signInWithEmailAndPassword(auth, normEmail, password);
-      return { user: result.user, error: null };
+      await signInWithEmailAndPassword(auth, normEmail, password);
     } catch (err: any) {
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         return { user: null, error: 'Invalid email or password. Please check your credentials.' };
@@ -136,7 +137,7 @@ export async function signInWithEmail(
     }
   }
 
-  // 2. Authoritative Server API Login
+  // 2. Authoritative Server API Login (sets session cookie and returns canonical UserAccount)
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',

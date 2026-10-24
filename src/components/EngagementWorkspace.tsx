@@ -70,6 +70,10 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
   const [isActionsLoading, setIsActionsLoading] = useState(true);
   const [actionsError, setActionsError] = useState<string | null>(null);
 
+  // Directly Assigned Campaign Briefs State
+  const [assignedBriefs, setAssignedBriefs] = useState<Brief[]>([]);
+  const [isBriefsLoading, setIsBriefsLoading] = useState(false);
+
   // New feedback input state
   const [newFeedbackComment, setNewFeedbackComment] = useState('');
   const [newFeedbackOffset, setNewFeedbackOffset] = useState<string>('0');
@@ -175,9 +179,30 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
     }
   };
 
+  // Load directly assigned campaign briefs
+  const fetchAssignedBriefs = async () => {
+    if (!currentUser?.id) return;
+    setIsBriefsLoading(true);
+    try {
+      const url = currentUser.role === 'creator'
+        ? `/api/briefs?assignedTo=${encodeURIComponent(currentUser.id)}`
+        : `/api/briefs?brandId=${encodeURIComponent(currentUser.id)}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setAssignedBriefs(data.briefs || []);
+      }
+    } catch (err) {
+      console.warn('Failed to load assigned briefs:', err);
+    } finally {
+      setIsBriefsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchEngagements();
     fetchPendingActions();
+    fetchAssignedBriefs();
   }, [currentUser?.id, currentUser?.role]);
 
   // Transition state handler
@@ -413,22 +438,37 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
     );
   }
 
-  if (engagements.length === 0) {
+  const hasEngagements = engagements.length > 0;
+  const hasAssignedBriefs = assignedBriefs.length > 0;
+  const hasPendingActions = pendingActions.length > 0;
+
+  if (!hasEngagements && !hasAssignedBriefs && !hasPendingActions && !isLoading) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-4">
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-4 animate-fade-in">
         <div className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto text-zinc-400">
           <Layers className="w-7 h-7 text-zinc-300" />
         </div>
-        <h2 className="text-xl font-bold text-white">No Active Engagements Yet</h2>
+        <h2 className="text-xl font-bold text-white">No Active Engagements or Assigned Briefs Yet</h2>
         <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
-          Commission a creator from the Discovery Grid or publish a Campaign Brief to launch your first end-to-end engagement lifecycle.
+          {currentUser?.role === 'creator'
+            ? 'When a brand assigns a campaign brief or submits a direct commission proposal to your account, it will appear right here in your dashboard.'
+            : 'Commission a creator from the Discovery Grid or publish a Campaign Brief to launch your first end-to-end engagement lifecycle.'}
         </p>
-        <button
-          onClick={onNavigateToBriefs}
-          className="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors"
-        >
-          Explore Campaign Briefs
-        </button>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            onClick={onNavigateToBriefs}
+            className="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors"
+          >
+            Explore Campaign Briefs
+          </button>
+          <button
+            onClick={() => { fetchEngagements(); fetchPendingActions(); fetchAssignedBriefs(); }}
+            className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold text-xs border border-zinc-750 transition-colors flex items-center gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Refresh Workspace</span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -484,6 +524,52 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Assigned Campaign Briefs Section */}
+      {assignedBriefs.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                Assigned Campaign Briefs ({assignedBriefs.length})
+              </h3>
+            </div>
+            <span className="text-[11px] text-zinc-400 font-mono">
+              {currentUser?.role === 'creator' ? 'Direct Brand Commission Briefs' : 'Your Managed Campaign Briefs'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {assignedBriefs.map(brief => (
+              <div
+                key={brief.id}
+                className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-all space-y-2.5 shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {brief.brandAvatar && (
+                      <img src={brief.brandAvatar} alt={brief.brandName} className="w-5 h-5 rounded-md object-cover border border-zinc-750" />
+                    )}
+                    <span className="text-xs text-zinc-300 font-medium">{brief.brandName}</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {brief.status || 'Assigned'}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-white">{brief.title}</h4>
+                  <p className="text-xs text-zinc-400 line-clamp-2 mt-1">{brief.description}</p>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-2 border-t border-zinc-800/80">
+                  <span>Budget: <strong className="text-zinc-200">{brief.budget}</strong></span>
+                  <span>Timeline: <strong className="text-zinc-200">{brief.deadline}</strong></span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Authoritative Action Required Hub */}
       {isActionsLoading ? (

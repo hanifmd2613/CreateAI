@@ -112,6 +112,7 @@ function ensureSeedUsers() {
 
 // Register a new user
 export async function registerUser(params: {
+  id?: string;
   name: string;
   email: string;
   password: string;
@@ -171,7 +172,7 @@ export async function registerUser(params: {
   // 3. Create Account
   const salt = generateSalt();
   const passwordHash = hashPassword(password, salt);
-  const userId = `user-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  const userId = params.id?.trim() || `user-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const now = new Date().toISOString();
 
   const defaultAvatar = params.avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(name)}`;

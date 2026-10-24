@@ -109,6 +109,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         isVerified: true,
       };
 
+      try {
+        await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: fbUser.uid,
+            name: userAcc.name,
+            email: userAcc.email,
+            password: `Gencraft_OAuth_${fbUser.uid.substring(0, 8)}`,
+            role: selectedRole,
+            companyName: userAcc.companyName,
+            specialization: userAcc.specialization,
+          }),
+        });
+      } catch (syncErr) {
+        console.warn('Google user MongoDB sync warning:', syncErr);
+      }
+
       await saveUserProfileToFirestore(userAcc);
       onLoginSuccess(userAcc);
       onClose();

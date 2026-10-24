@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Brief, Creator } from '../types';
+import { Brief, Creator, UserAccount } from '../types';
 import { 
   Sparkles, 
   Send, 
@@ -22,6 +22,7 @@ interface BriefBuilderProps {
   onExploreMatchingCreators: (tools: string[]) => void;
   initialPrompt?: string;
   preselectedCreator?: Creator | null;
+  currentUser?: UserAccount | null;
   groqKey?: string;
   geminiKey?: string;
   onOpenApiConfig?: () => void;
@@ -55,10 +56,14 @@ export const BriefBuilder: React.FC<BriefBuilderProps> = ({
   onExploreMatchingCreators,
   initialPrompt = '',
   preselectedCreator = null,
+  currentUser = null,
   groqKey = '',
   geminiKey = '',
   onOpenApiConfig,
 }) => {
+  // Submission & Loading State
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // AI Assist State
   const [roughIdea, setRoughIdea] = useState(initialPrompt);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -260,35 +265,64 @@ export const BriefBuilder: React.FC<BriefBuilderProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) {
       alert('Please provide a campaign title and brief description.');
       return;
     }
 
+    const assignedCreatorId = preselectedCreator?.id;
+    const assignedCreatorName = preselectedCreator?.name;
+    const visibility: 'public' | 'private' = preselectedCreator ? 'private' : 'public';
+    const status: 'Assigned' | 'Open' = preselectedCreator ? 'Assigned' : 'Open';
+
     const newBrief: Brief = {
       id: `brief-${Date.now()}`,
-      title,
-      brandName: 'Kaveri Creative Studios',
-      brandAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=120&q=80',
+      brandId: currentUser?.id || 'user-brand-kaveri',
+      brandName: currentUser?.companyName || currentUser?.name || 'Kaveri Creative Studios',
+      brandAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=120&q=80',
+      assignedCreatorId,
+      assignedCreatorName,
+      visibility,
+      title: title.trim(),
       contentType,
       style,
       aspectRatio,
       commercialUse,
       budget,
       deadline,
-      description,
+      description: description.trim(),
       requiredTools,
       deliverables,
-      status: 'Open',
-      createdAt: 'Just now',
+      status,
+      createdAt: new Date().toISOString(),
       applicantsCount: 0
     };
 
-    setCreatedBrief(newBrief);
-    setPublishedSuccess(true);
-    onPublishBrief(newBrief);
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/briefs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newBrief),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || 'Failed to persist brief to database.');
+      }
+
+      const savedBrief: Brief = data.brief || newBrief;
+      setCreatedBrief(savedBrief);
+      setPublishedSuccess(true);
+      onPublishBrief(savedBrief);
+    } catch (err: any) {
+      console.error('Error publishing brief:', err);
+      alert(`Error publishing brief: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -712,10 +746,15 @@ export const BriefBuilder: React.FC<BriefBuilderProps> = ({
 
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Publish Campaign Brief</span>
+                  <span>
+                    {isSubmitting 
+                      ? 'Persisting to Database...' 
+                      : (preselectedCreator ? `Assign Brief to ${preselectedCreator.name}` : 'Publish Campaign Brief')}
+                  </span>
                 </button>
               </div>
             </div>

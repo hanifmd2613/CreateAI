@@ -11,6 +11,7 @@ import {
 interface HireModalProps {
   creator: Creator;
   briefs: Brief[];
+  currentUser?: import('../types').UserAccount | null;
   onClose: () => void;
   onSuccess: (message: string) => void;
 }
@@ -18,6 +19,7 @@ interface HireModalProps {
 export const HireModal: React.FC<HireModalProps> = ({
   creator,
   briefs,
+  currentUser = null,
   onClose,
   onSuccess,
 }) => {
@@ -36,15 +38,20 @@ export const HireModal: React.FC<HireModalProps> = ({
       const title = selectedBriefId === 'custom' ? (customTitle || 'Direct Commission') : (activeBrief?.title || 'Commercial Campaign');
       const budget = selectedBriefId === 'custom' ? customBudget : (activeBrief?.budget || customBudget);
 
+      const resolvedBrandId = currentUser?.id || 'user-brand-kaveri';
+      const resolvedBrandName = currentUser?.companyName || currentUser?.name || 'Kaveri Creative Studios';
+
       const res = await fetch('/api/engagements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           briefId: selectedBriefId === 'custom' ? undefined : selectedBriefId,
           creatorId: creator.id,
-          brandId: 'user-brand-kaveri',
-          brandName: 'Kaveri Creative Studios',
+          brandId: resolvedBrandId,
+          brandName: resolvedBrandName,
+          brandAvatar: currentUser?.avatar,
           creatorName: creator.name,
+          creatorAvatar: creator.avatar,
           projectTitle: title,
           budget,
           initialMessage: projectMessage,
@@ -52,15 +59,33 @@ export const HireModal: React.FC<HireModalProps> = ({
       });
 
       if (res.ok) {
+        // If an existing brief was assigned, update the brief record with the assigned creator
+        if (selectedBriefId && selectedBriefId !== 'custom') {
+          try {
+            await fetch(`/api/briefs/${selectedBriefId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                assignedCreatorId: creator.id,
+                assignedCreatorName: creator.name,
+                status: 'Assigned',
+              }),
+            });
+          } catch (patchErr) {
+            console.warn('Brief assignment PATCH warning:', patchErr);
+          }
+        }
+
         onSuccess(`Commission offer sent to ${creator.name}! Engagement initiated in Workspace.`);
+        onClose();
       } else {
-        onSuccess(`Commission inquiry sent to ${creator.name}.`);
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error?.message || 'Failed to submit commission proposal to creator.');
       }
-    } catch {
-      onSuccess(`Commission inquiry logged for ${creator.name}.`);
+    } catch (err: any) {
+      alert(`Network error submitting proposal: ${err.message}`);
     } finally {
       setIsSubmitting(false);
-      onClose();
     }
   };
 
