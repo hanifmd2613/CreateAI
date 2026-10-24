@@ -2,8 +2,12 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IBrief extends Document {
   id: string;
+  brandId?: string;
   brandName: string;
   brandAvatar?: string;
+  assignedCreatorId?: string;
+  assignedCreatorName?: string;
+  visibility?: 'public' | 'private';
   title: string;
   rawIdea?: string;
   description: string;
@@ -18,7 +22,7 @@ export interface IBrief extends Document {
   requiredSkills?: string[];
   requiredTools: string[];
   deliverables?: string[];
-  status?: 'Open' | 'In Review' | 'In Production';
+  status?: 'Open' | 'In Review' | 'In Production' | 'Assigned' | 'Completed';
   applicantsCount?: number;
   licensingRequirements?: any;
   targetSpecs?: any;
@@ -28,8 +32,12 @@ export interface IBrief extends Document {
 
 const BriefSchema = new Schema<IBrief>({
   id: { type: String, required: true, unique: true, index: true },
+  brandId: { type: String, index: true },
   brandName: { type: String, required: true },
   brandAvatar: { type: String },
+  assignedCreatorId: { type: String, index: true },
+  assignedCreatorName: { type: String },
+  visibility: { type: String, enum: ['public', 'private'], default: 'public', index: true },
   title: { type: String, required: true, index: true },
   rawIdea: { type: String },
   description: { type: String, required: true },
@@ -44,7 +52,7 @@ const BriefSchema = new Schema<IBrief>({
   requiredSkills: [{ type: String }],
   requiredTools: [{ type: String, required: true }],
   deliverables: [{ type: String }],
-  status: { type: String, enum: ['Open', 'In Review', 'In Production'], default: 'Open' },
+  status: { type: String, enum: ['Open', 'In Review', 'In Production', 'Assigned', 'Completed'], default: 'Open', index: true },
   applicantsCount: { type: Number, default: 0 },
   licensingRequirements: Schema.Types.Mixed,
   targetSpecs: Schema.Types.Mixed,
@@ -53,3 +61,4 @@ const BriefSchema = new Schema<IBrief>({
 });
 
 export const BriefModel: Model<IBrief> = mongoose.models.Brief || mongoose.model<IBrief>('Brief', BriefSchema);
+

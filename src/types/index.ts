@@ -119,9 +119,13 @@ export interface ChatMessage {
 
 export interface Brief {
   id: string;
-  title: string;
+  brandId?: string;
   brandName: string;
   brandAvatar?: string;
+  assignedCreatorId?: string;
+  assignedCreatorName?: string;
+  visibility?: 'public' | 'private';
+  title: string;
   rawIdea?: string;
   contentType: string;
   style: string;
@@ -135,7 +139,7 @@ export interface Brief {
   requiredSkills?: string[];
   requiredTools: string[];
   deliverables?: string[];
-  status?: 'Open' | 'In Review' | 'In Production';
+  status?: 'Open' | 'In Review' | 'In Production' | 'Assigned' | 'Completed';
   createdAt?: string;
   applicantsCount?: number;
   licensingRequirements?: LicensingRequirements;

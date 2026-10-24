@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { connectToDatabase } from './mongodb';
 import { UserModel, IUser } from './models/User';
+import { CreatorModel } from './models/Creator';
 import { UserAccount, UserRole, Creator } from '../types';
 
 interface StoredUser {
@@ -207,9 +208,40 @@ export async function registerUser(params: {
         createdAt: new Date(now),
         updatedAt: new Date(now),
       });
+
+      if (role === 'creator') {
+        await CreatorModel.findOneAndUpdate(
+          { id: stored.id },
+          {
+            id: stored.id,
+            name: stored.name,
+            handle: stored.handle || `@${stored.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}.ai`,
+            avatar: stored.avatar || defaultAvatar,
+            specialization: stored.specialization || 'Generative AI Director',
+            bio: stored.bio || 'AI Video & Visual Specialist creating commercial content with generative models.',
+            location: stored.location || 'Bengaluru, India',
+            languages: ['English'],
+            skills: ['AI Directing', 'Prompt Engineering'],
+            tools: stored.tools || ['Veo', 'Kling'],
+            hourlyRate: stored.hourlyRate || 9500,
+            avgTurnaround: '48 Hours',
+            availability: true,
+            availableNow: true,
+            isVerified: false,
+            rating: 5.0,
+            reviewCount: 0,
+            completedProjects: 0,
+            portfolio: [],
+            isUserCreated: true,
+            createdAt: new Date(now),
+            updatedAt: new Date(now),
+          },
+          { upsert: true, new: true }
+        );
+      }
     }
   } catch (err) {
-    console.warn('MongoDB user create fallback to memory:', err);
+    console.warn('MongoDB user/creator create fallback to memory:', err);
   }
 
   const userAccount: UserAccount = {

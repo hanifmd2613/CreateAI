@@ -319,7 +319,7 @@ export async function getEngagements(filter: { creatorId?: string; brandId?: str
         }
       }
 
-      if (docs && docs.length > 0) {
+      if (Array.isArray(docs)) {
         return docs.map((d: any) => ({
           ...d,
           createdAt: d.createdAt ? new Date(d.createdAt).toISOString() : new Date().toISOString(),

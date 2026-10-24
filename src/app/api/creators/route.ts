@@ -23,7 +23,14 @@ export async function GET(req: NextRequest) {
       try {
         const dbResults = await CreatorModel.find({}).lean();
         if (dbResults && dbResults.length > 0) {
-          allCreators = dbResults as any[];
+          const map = new Map<string, Creator>();
+          for (const m of MOCK_CREATORS) {
+            map.set(m.id, m);
+          }
+          for (const d of (dbResults as any[])) {
+            map.set(d.id, d);
+          }
+          allCreators = Array.from(map.values());
         }
       } catch (dbErr) {
         console.warn('MongoDB query warning in creators GET, using fallback dataset:', dbErr);
