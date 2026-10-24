@@ -1,31 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '../../../lib/mongodb';
-import { EngagementModel } from '../../../lib/models/Engagement';
-
-let engagementsCache: any[] = [];
+import { getEngagements, saveEngagement, recordAudit } from '../../../lib/engagementStore';
+import { evaluateLicensingCompatibility } from '../../../lib/licensing';
+import { BriefModel } from '../../../lib/models/Brief';
+import { CreatorModel } from '../../../lib/models/Creator';
+import { INITIAL_BRIEFS, MOCK_CREATORS } from '../../../data/mockData';
+import { EngagementRecord } from '../../../types';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const creatorId = searchParams.get('creatorId');
-    const brandId = searchParams.get('brandId');
+    const creatorId = searchParams.get('creatorId') || undefined;
+    const brandId = searchParams.get('brandId') || undefined;
 
-    const conn = await connectToDatabase();
-    if (conn) {
-      const query: any = {};
-      if (creatorId) query.creatorId = creatorId;
-      if (brandId) query.brandId = brandId;
-
-      const items = await EngagementModel.find(query).sort({ createdAt: -1 }).lean();
-      return NextResponse.json({ success: true, count: items.length, engagements: items });
-    }
-
-    let filtered = [...engagementsCache];
-    if (creatorId) filtered = filtered.filter(e => e.creatorId === creatorId);
-    if (brandId) filtered = filtered.filter(e => e.brandId === brandId);
-
-    return NextResponse.json({ success: true, count: filtered.length, engagements: filtered });
-
+    const items = await getEngagements({ creatorId, brandId });
+    return NextResponse.json({ success: true, count: items.length, engagements: items });
   } catch (err: any) {
     return NextResponse.json({
       success: false,
@@ -45,38 +33,75 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const engagement = {
-      id: `eng-${Date.now()}`,
-      briefId: body.briefId,
+    // Attempt to resolve brief and creator to determine initial licensing status
+    let brief = null;
+    let creator = null;
+
+    if (body.briefId) {
+      try {
+        brief = await BriefModel.findOne({ id: body.briefId }).lean();
+      } catch (e) {}
+      if (!brief) brief = INITIAL_BRIEFS.find(b => b.id === body.briefId) || null;
+    }
+
+    try {
+      creator = await CreatorModel.findOne({ id: body.creatorId }).lean();
+    } catch (e) {}
+    if (!creator) creator = MOCK_CREATORS.find(c => c.id === body.creatorId) || null;
+
+    let licensingStatus: any = 'UNKNOWN';
+    if (brief && creator) {
+      const licensingEval = evaluateLicensingCompatibility(brief as any, creator as any);
+      licensingStatus = licensingEval.status;
+    }
+
+    const engagement: EngagementRecord = {
+      id: body.id || `eng-${Date.now()}`,
+      briefId: body.briefId || undefined,
       brandId: body.brandId || 'user-brand-kaveri',
       brandName: body.brandName || 'Kaveri Creative Studios',
+      brandAvatar: body.brandAvatar || 'https://api.dicebear.com/7.x/identicon/svg?seed=KaveriStudios',
       creatorId: body.creatorId,
-      creatorName: body.creatorName || 'Target Creator',
+      creatorName: body.creatorName || (creator ? creator.name : 'Target Creator'),
+      creatorAvatar: body.creatorAvatar || (creator ? creator.avatar : undefined),
       projectTitle: body.projectTitle.trim(),
       proposedBudget: body.proposedBudget || '₹3,50,000',
-      status: 'Pending',
+      status: 'CONTACTED',
+      licensingStatus,
       message: body.message || 'Direct project inquiry submitted via GenCraft Marketplace.',
       milestones: body.milestones || [
         { title: 'Initial Style Seeds & Keyframe Approval', amount: '50%', status: 'In Escrow' },
         { title: 'Final 4K Master & Seed Manifest Delivery', amount: '50%', status: 'Pending' }
       ],
-      createdAt: new Date(),
+      currentVersionNumber: 0,
+      maxRevisions: body.maxRevisions || 2,
+      revisionsUsed: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    const conn = await connectToDatabase();
-    if (conn) {
-      try {
-        await EngagementModel.create(engagement);
-      } catch (dbErr) {
-        console.warn('MongoDB engagement save warning:', dbErr);
-      }
-    }
+    const saved = await saveEngagement(engagement);
 
-    engagementsCache.unshift(engagement);
+    // Record audit event
+    await recordAudit(
+      'ENGAGEMENT_CREATED',
+      engagement.brandId,
+      engagement.brandName,
+      'brand',
+      {
+        projectTitle: engagement.projectTitle,
+        proposedBudget: engagement.proposedBudget,
+        creatorId: engagement.creatorId,
+        briefId: engagement.briefId,
+        licensingStatus,
+      },
+      engagement.id,
+      engagement.briefId
+    );
 
     return NextResponse.json({
       success: true,
-      engagement,
+      engagement: saved,
       message: 'Engagement proposal successfully sent to creator with milestone escrow protection.',
     }, { status: 201 });
 

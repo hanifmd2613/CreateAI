@@ -20,6 +20,8 @@ export interface IBrief extends Document {
   deliverables?: string[];
   status?: 'Open' | 'In Review' | 'In Production';
   applicantsCount?: number;
+  licensingRequirements?: any;
+  targetSpecs?: any;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +46,8 @@ const BriefSchema = new Schema<IBrief>({
   deliverables: [{ type: String }],
   status: { type: String, enum: ['Open', 'In Review', 'In Production'], default: 'Open' },
   applicantsCount: { type: Number, default: 0 },
+  licensingRequirements: Schema.Types.Mixed,
+  targetSpecs: Schema.Types.Mixed,
 }, {
   timestamps: true,
 });

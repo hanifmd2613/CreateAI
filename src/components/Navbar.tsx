@@ -20,7 +20,9 @@ import {
   Sun,
   Moon,
   MessageSquare,
-  Camera
+  Camera,
+  Layers,
+  FolderKanban
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -128,6 +130,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Post a Brief</span>
+              </button>
+
+              <button
+                onClick={() => onNavigate('workspace')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  currentView === 'workspace'
+                    ? 'text-white bg-zinc-800/90'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
+                }`}
+              >
+                <FolderKanban className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Workspace</span>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  Round 2
+                </span>
               </button>
             </nav>
           </div>
@@ -354,6 +371,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             Post a Brief
+          </button>
+          <button
+            onClick={() => {
+              onNavigate('workspace');
+              setMobileMenuOpen(false);
+            }}
+            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-between ${
+              currentView === 'workspace' ? 'bg-zinc-800 text-white' : 'text-zinc-400'
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <FolderKanban className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Workspace</span>
+            </span>
+            <span className="text-[9px] font-mono bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/30">Round 2</span>
           </button>
 
           <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-xs">

@@ -2,6 +2,11 @@ import { connectToDatabase } from '../lib/mongodb';
 import { CreatorModel } from '../lib/models/Creator';
 import { BriefModel } from '../lib/models/Brief';
 import { MatchResultModel } from '../lib/models/MatchResult';
+import { EngagementModel } from '../lib/models/Engagement';
+import { DeliverableVersionModel } from '../lib/models/DeliverableVersion';
+import { VersionFeedbackModel } from '../lib/models/VersionFeedback';
+import { DeliveryCheckModel } from '../lib/models/DeliveryCheck';
+import { AuditLogModel } from '../lib/models/AuditLog';
 import { computeCreatorMatch } from '../lib/matching';
 
 export const SEED_CREATORS = [
@@ -35,6 +40,15 @@ export const SEED_CREATORS = [
       auditDate: 'Oct 2024',
       safetyScore: 99.8,
       commercialRightsGuaranteed: true,
+    },
+    licensingTerms: {
+      permittedScope: 'Full Buyout' as const,
+      allowedTerritories: ['Worldwide' as const, 'Domestic (India)' as const],
+      maxDurationMonths: 24,
+      allowedChannels: ['Paid Advertising' as const, 'Organic Social' as const, 'Digital / Web' as const, 'Broadcast / TV' as const, 'All Media' as const],
+      exclusivityAvailable: true,
+      derivativeRightsAllowed: true,
+      modelAuditCertifications: ['V24 Neural Audited Checkpoints'],
     },
     rating: 4.98,
     reviewCount: 46,
@@ -74,7 +88,7 @@ export const SEED_CREATORS = [
         specificModel: 'Veo + Kling Vertical Macro',
         workflowDescription: 'Futuristic smartphone glass refractions in Flux.1 -> Camera macro tracking in Veo -> Dynamic hologram assembly in Kling',
         aspectRatio: '9:16',
-        duration: '0:30',
+        duration: '0:15',
         client: 'NovaPhone Global',
         promptSnippet: 'Futuristic sleek holographic smartphone hovering in rainy neon glass environment, macro camera sweep, obsidian metallic reflections, 9:16 vertical 60fps',
         views: '95K',
@@ -128,6 +142,14 @@ export const SEED_CREATORS = [
       auditDate: 'Sep 2024',
       safetyScore: 99.5,
       commercialRightsGuaranteed: true,
+    },
+    licensingTerms: {
+      permittedScope: 'Commercial Licensed' as const,
+      allowedTerritories: ['Worldwide' as const],
+      maxDurationMonths: 12,
+      allowedChannels: ['Organic Social' as const, 'Digital / Web' as const, 'Paid Advertising' as const],
+      exclusivityAvailable: false,
+      derivativeRightsAllowed: true,
     },
     rating: 4.95,
     reviewCount: 38,
@@ -189,6 +211,14 @@ export const SEED_CREATORS = [
       safetyScore: 99.9,
       commercialRightsGuaranteed: true,
     },
+    licensingTerms: {
+      permittedScope: 'Full Buyout' as const,
+      allowedTerritories: ['Worldwide' as const],
+      maxDurationMonths: 36,
+      allowedChannels: ['Paid Advertising' as const, 'Organic Social' as const, 'Digital / Web' as const, 'All Media' as const],
+      exclusivityAvailable: true,
+      derivativeRightsAllowed: true,
+    },
     rating: 4.99,
     reviewCount: 64,
     completedProjects: 78,
@@ -246,6 +276,16 @@ export const SEED_CREATORS = [
       safetyScore: 100,
       commercialRightsGuaranteed: true,
     },
+    // Explicit restricted licensing to cleanly demonstrate and test the licensing conflict scenario
+    licensingTerms: {
+      permittedScope: 'Commercial Licensed' as const,
+      allowedTerritories: ['Domestic (India)' as const],
+      maxDurationMonths: 3,
+      allowedChannels: ['Organic Social' as const],
+      exclusivityAvailable: false,
+      derivativeRightsAllowed: false,
+      customRestrictions: ['India domestic only', 'No paid advertising amplification', 'Max 3 months window']
+    },
     rating: 4.96,
     reviewCount: 31,
     completedProjects: 45,
@@ -276,24 +316,39 @@ export const SEED_CREATORS = [
 export const SEED_BRIEFS = [
   {
     id: 'brief-novaphone-demo',
-    title: 'NovaPhone: Futuristic 30-Second Smartphone Launch Film',
+    title: 'NovaPhone: Futuristic 15-Second Smartphone Launch Film',
     brandName: 'NovaPhone Global',
     brandAvatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=NovaPhone',
     contentType: 'AI Commercial Video',
     style: 'Cinematic Hyperrealism',
     aspectRatio: '9:16' as const,
+    duration: '0:15',
     commercialUse: 'Full Buyout' as const,
     budget: '₹6,50,000',
     deadline: '3 Days',
-    description: 'Create a futuristic 30-second smartphone launch film. Showcase holographic display assembly, liquid metal casing, micro-camera projection, and high-speed urban drift in rain-slicked city streets. Requires 9:16 vertical cut for Instagram Reels & YouTube Shorts with full commercial buyout.',
+    description: 'Create a futuristic 15-second smartphone launch film. Showcase holographic display assembly, liquid metal casing, micro-camera projection, and high-speed urban drift in rain-slicked city streets. Requires 9:16 vertical cut for Instagram Reels & YouTube Shorts with full commercial buyout.',
     requiredTools: ['Veo', 'Kling', 'ElevenLabs'],
     requiredSkills: ['AI Filmmaking', 'Product Visualization', 'Camera Motion Paths', 'Latent Motion Synthesis'],
     deliverables: [
-      'Master 30-Second 4K Vertical Video (9:16 60fps)',
-      '15-Second Teaser Cut for Instagram Reels & YouTube Shorts',
+      'Master 15-Second 4K Vertical Video (9:16 60fps)',
       '5 High-Res Keyframe Render Stills (8K)',
       'Deterministic Seed & Workflow Manifest Certificate'
     ],
+    licensingRequirements: {
+      commercialScope: 'Full Buyout' as const,
+      territory: 'Worldwide' as const,
+      durationMonths: 12,
+      channels: ['Paid Advertising' as const, 'Organic Social' as const, 'Digital / Web' as const],
+      exclusivity: 'Category Exclusive' as const,
+      derivativeRights: true,
+    },
+    targetSpecs: {
+      aspectRatio: '9:16' as const,
+      width: 1080,
+      height: 1920,
+      maxDurationSeconds: 15,
+      requiredFormat: 'mp4' as const,
+    },
     status: 'Open' as const,
     createdAt: new Date(),
     applicantsCount: 5,
@@ -306,6 +361,7 @@ export const SEED_BRIEFS = [
     contentType: 'Photorealistic Product Imagery',
     style: 'Minimalist Scandinavian & Macro',
     aspectRatio: '1:1' as const,
+    duration: '0:10',
     commercialUse: 'Full Buyout' as const,
     budget: '₹3,10,000',
     deadline: '3 Days',
@@ -313,6 +369,14 @@ export const SEED_BRIEFS = [
     requiredTools: ['Flux.1', 'Veo', 'Kling'],
     requiredSkills: ['Product Visualization', 'Studio Lighting', 'Fluid Dynamics'],
     deliverables: ['8 Ultra-Res 8K Packshots', '2 Looping 10s Fluid Videos (1:1 & 9:16)', 'Custom Product LoRA weights'],
+    licensingRequirements: {
+      commercialScope: 'Full Buyout' as const,
+      territory: 'Worldwide' as const,
+      durationMonths: 12,
+      channels: ['Organic Social' as const, 'Digital / Web' as const, 'Paid Advertising' as const],
+      exclusivity: 'Non-Exclusive' as const,
+      derivativeRights: true,
+    },
     status: 'Open' as const,
     createdAt: new Date(),
     applicantsCount: 12
@@ -333,6 +397,11 @@ export async function seedDatabase() {
     await CreatorModel.deleteMany({});
     await BriefModel.deleteMany({});
     await MatchResultModel.deleteMany({});
+    await EngagementModel.deleteMany({});
+    await DeliverableVersionModel.deleteMany({});
+    await VersionFeedbackModel.deleteMany({});
+    await DeliveryCheckModel.deleteMany({});
+    await AuditLogModel.deleteMany({});
 
     console.log('Cleared existing collections.');
 
@@ -368,7 +437,227 @@ export async function seedDatabase() {
       console.log(`Precomputed ${matchRecords.length} MatchResult records for NovaPhone Demo Brief.`);
     }
 
-    console.log('🎉 Database seeding completed cleanly!');
+    // 5. Seed Pre-configured Round 2 Engagement with Version History & Delivery Checks
+    const seedEngagementId = 'eng-demo-kaveri-novaphone';
+    await EngagementModel.create({
+      id: seedEngagementId,
+      briefId: 'brief-novaphone-demo',
+      brandId: 'user-brand-kaveri',
+      brandName: 'Kaveri Creative Studios',
+      brandAvatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=KaveriStudios',
+      creatorId: 'creator-1',
+      creatorName: 'Karthik Subramanian',
+      creatorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=KarthikSubramanian&gender=male&hairColor=000000&facialHairProbability=60&accessoriesProbability=20',
+      projectTitle: 'NovaPhone 15s Vertical Launch Film (Holographic Series)',
+      proposedBudget: '₹6,50,000',
+      status: 'FINAL_REVIEW',
+      licensingStatus: 'COMPATIBLE',
+      message: 'Direct project commission for 15s 9:16 vertical master cut for global launch.',
+      milestones: [
+        { title: 'Draft V1 Generation & Seed Checkpoints', amount: '₹3,25,000', status: 'In Escrow' },
+        { title: 'Final 4K Master & IP Buyout Delivery', amount: '₹3,25,000', status: 'Pending' }
+      ],
+      agreedTerms: {
+        confirmedBudget: '₹6,50,000',
+        confirmedDeadline: '3 Days',
+        maxRevisionRounds: 2,
+        licensingTerms: {
+          commercialScope: 'Full Buyout',
+          territory: 'Worldwide',
+          durationMonths: 12,
+          channels: ['Paid Advertising', 'Organic Social', 'Digital / Web'],
+          exclusivity: 'Category Exclusive',
+          derivativeRights: true,
+        },
+        scopeSummary: '15-second vertical 9:16 master cut with full worldwide commercial buyout rights.'
+      },
+      currentVersionNumber: 2,
+      maxRevisions: 2,
+      revisionsUsed: 1,
+      createdAt: new Date(Date.now() - 3600 * 1000 * 24),
+      updatedAt: new Date(),
+    });
+
+    // Version 1 (30s duration -> failed check)
+    await DeliverableVersionModel.create({
+      id: `ver-${seedEngagementId}-v1`,
+      engagementId: seedEngagementId,
+      versionNumber: 1,
+      fileUrl: 'https://storage.gencraft.ai/engagements/novaphone_v1_30s_rough.mp4',
+      fileName: 'novaphone_launch_v1_30s_rough.mp4',
+      fileSize: 28400000,
+      fileChecksum: 'a71b3e9481284e892c908df389281a8c9837f19b28374e',
+      uploaderId: 'creator-1',
+      uploaderName: 'Karthik Subramanian',
+      submittedAt: new Date(Date.now() - 3600 * 1000 * 12),
+      generationNotes: 'Generated initial rough cut in Flux.1 + Veo. Extended drift sequence for brand review.',
+      status: 'REVISION_REQUESTED',
+      mediaMetadata: {
+        format: 'mp4',
+        width: 1080,
+        height: 1920,
+        aspectRatio: '9:16',
+        durationSeconds: 30,
+        fileSizeBytes: 28400000,
+        isDecodable: true,
+      }
+    });
+
+    // Delivery Check for V1 (FAIL on duration)
+    await DeliveryCheckModel.create({
+      id: `chk-${seedEngagementId}-v1`,
+      versionId: `ver-${seedEngagementId}-v1`,
+      engagementId: seedEngagementId,
+      overallStatus: 'FAIL',
+      checks: [
+        {
+          id: 'chk-decodable',
+          name: 'Media Decodability & Container Integrity',
+          requirement: 'Valid, uncorrupted MP4 media stream',
+          actual: 'MP4 (Container: isom)',
+          status: 'PASS',
+          message: 'Media header is clean, intact, and decodable.',
+          isBlocking: false,
+        },
+        {
+          id: 'chk-ratio',
+          name: 'Aspect Ratio & Orientation',
+          requirement: 'Strict 9:16',
+          actual: '9:16 (1080×1920px)',
+          status: 'PASS',
+          message: 'Aspect ratio matches target 9:16 specification.',
+          isBlocking: true,
+        },
+        {
+          id: 'chk-duration',
+          name: 'Video Duration Constraint',
+          requirement: 'Maximum 15s runtime',
+          actual: '30s runtime',
+          status: 'FAIL',
+          message: 'Asset duration (30s) exceeds the required maximum limit of 15s by 15.0s.',
+          isBlocking: true,
+        }
+      ],
+      extractedMetadata: {
+        format: 'mp4',
+        width: 1080,
+        height: 1920,
+        aspectRatio: '9:16',
+        durationSeconds: 30,
+        fileSizeBytes: 28400000,
+        isDecodable: true,
+      },
+      inspectedAt: new Date(Date.now() - 3600 * 1000 * 12),
+      actionableGuidance: 'Fix the duration violation: re-edit and trim to 15 seconds maximum.'
+    });
+
+    // Version-Specific Feedback on V1
+    await VersionFeedbackModel.create({
+      id: `fb-${seedEngagementId}-1`,
+      engagementId: seedEngagementId,
+      versionId: `ver-${seedEngagementId}-v1`,
+      authorId: 'user-brand-kaveri',
+      authorName: 'Kaveri Creative Studios',
+      authorRole: 'brand',
+      timestampOffset: 12.0,
+      comment: 'Visual aesthetics and drift physics are stunning, but runtime is 30s. Please trim to exactly 15s for Instagram Reels & Shorts.',
+      resolved: true,
+      resolvedAt: new Date(Date.now() - 3600 * 1000 * 4),
+      resolvedInVersion: 2,
+      createdAt: new Date(Date.now() - 3600 * 1000 * 10),
+    });
+
+    // Version 2 (15s duration -> PASS)
+    await DeliverableVersionModel.create({
+      id: `ver-${seedEngagementId}-v2`,
+      engagementId: seedEngagementId,
+      versionNumber: 2,
+      fileUrl: 'https://storage.gencraft.ai/engagements/novaphone_v2_15s_master.mp4',
+      fileName: 'novaphone_launch_v2_15s_master.mp4',
+      fileSize: 14200000,
+      fileChecksum: 'f3910b847192847c928374981729384729182374912',
+      uploaderId: 'creator-1',
+      uploaderName: 'Karthik Subramanian',
+      submittedAt: new Date(Date.now() - 3600 * 1000 * 4),
+      generationNotes: 'Tightened pacing in Kling to 15.0s flat; accelerated holographic reveal and enhanced neon reflections.',
+      status: 'UNDER_REVIEW',
+      mediaMetadata: {
+        format: 'mp4',
+        width: 1080,
+        height: 1920,
+        aspectRatio: '9:16',
+        durationSeconds: 15,
+        fileSizeBytes: 14200000,
+        isDecodable: true,
+      }
+    });
+
+    // Delivery Check for V2 (PASS)
+    await DeliveryCheckModel.create({
+      id: `chk-${seedEngagementId}-v2`,
+      versionId: `ver-${seedEngagementId}-v2`,
+      engagementId: seedEngagementId,
+      overallStatus: 'PASS',
+      checks: [
+        {
+          id: 'chk-decodable',
+          name: 'Media Decodability & Container Integrity',
+          requirement: 'Valid, uncorrupted MP4 media stream',
+          actual: 'MP4 (Container: isom)',
+          status: 'PASS',
+          message: 'Media header is clean, intact, and decodable.',
+          isBlocking: false,
+        },
+        {
+          id: 'chk-ratio',
+          name: 'Aspect Ratio & Orientation',
+          requirement: 'Strict 9:16',
+          actual: '9:16 (1080×1920px)',
+          status: 'PASS',
+          message: 'Aspect ratio matches target 9:16 specification.',
+          isBlocking: true,
+        },
+        {
+          id: 'chk-duration',
+          name: 'Video Duration Constraint',
+          requirement: 'Maximum 15s runtime',
+          actual: '15.0s runtime',
+          status: 'PASS',
+          message: 'Duration (15.0s) is strictly within the 15s threshold.',
+          isBlocking: true,
+        }
+      ],
+      extractedMetadata: {
+        format: 'mp4',
+        width: 1080,
+        height: 1920,
+        aspectRatio: '9:16',
+        durationSeconds: 15,
+        fileSizeBytes: 14200000,
+        isDecodable: true,
+      },
+      inspectedAt: new Date(Date.now() - 3600 * 1000 * 4),
+      actionableGuidance: 'All automated physical delivery checks passed. Deliverable is ready for Brand Creative Director sign-off.'
+    });
+
+    // Seed Audit Log
+    await AuditLogModel.create({
+      id: `audit-${seedEngagementId}-init`,
+      engagementId: seedEngagementId,
+      briefId: 'brief-novaphone-demo',
+      action: 'ENGAGEMENT_INITIALIZED',
+      actorId: 'user-brand-kaveri',
+      actorName: 'Kaveri Creative Studios',
+      actorRole: 'brand',
+      details: {
+        projectTitle: 'NovaPhone 15s Vertical Launch Film (Holographic Series)',
+        budget: '₹6,50,000',
+        creatorId: 'creator-1',
+      },
+      createdAt: new Date(Date.now() - 3600 * 1000 * 24),
+    });
+
+    console.log('🎉 Database seeding completed cleanly with Round 2 Engagement, Versions, and Checks!');
   } catch (err) {
     console.error('Error during database seed execution:', err);
   }

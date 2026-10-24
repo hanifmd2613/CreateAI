@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, X, ShieldCheck, Check, ArrowRight, MessageSquare, Briefcase, ChevronRight, Award, Zap } from 'lucide-react';
-import { Brief, Creator } from '../types';
+import { Sparkles, X, ShieldCheck, Check, ArrowRight, MessageSquare, Briefcase, ChevronRight, Award, Zap, Bot, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Brief, Creator, AutoShortlistProposal } from '../types';
 import { rankCreatorsForBrief, CreatorMatchCalculation } from '../lib/matching';
 
 interface ExplainableMatchModalProps {
@@ -24,6 +24,9 @@ export const ExplainableMatchModal: React.FC<ExplainableMatchModalProps> = ({
 }) => {
   const [rankedMatches, setRankedMatches] = useState<CreatorMatchCalculation[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<CreatorMatchCalculation | null>(null);
+  const [agentProposal, setAgentProposal] = useState<AutoShortlistProposal | null>(null);
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
+  const [agentActionStatus, setAgentActionStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (brief && creators.length > 0) {
@@ -32,8 +35,53 @@ export const ExplainableMatchModal: React.FC<ExplainableMatchModalProps> = ({
       if (matches.length > 0) {
         setSelectedMatch(matches[0]);
       }
+      setAgentProposal(null);
+      setAgentActionStatus(null);
     }
   }, [brief, creators]);
+
+  const handleRunAutoShortlist = async () => {
+    setIsAgentRunning(true);
+    setAgentActionStatus(null);
+    try {
+      const res = await fetch('/api/agent/shortlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ briefId: brief.id })
+      });
+      const data = await res.json();
+      if (data.proposal) {
+        setAgentProposal(data.proposal);
+      } else {
+        setAgentActionStatus(data.error || 'Agent completed evaluation.');
+      }
+    } catch {
+      setAgentActionStatus('Agent execution failed. Please verify API connectivity.');
+    } finally {
+      setIsAgentRunning(false);
+    }
+  };
+
+  const handleProposalAction = async (action: 'approve' | 'reject') => {
+    if (!agentProposal) return;
+    try {
+      const res = await fetch(`/api/agent/shortlist/${agentProposal.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          notes: action === 'approve' ? 'Brand accepted autonomous recommendation.' : 'Brand dismissed proposal.'
+        })
+      });
+      const data = await res.json();
+      if (data.proposal) {
+        setAgentProposal(data.proposal);
+        setAgentActionStatus(action === 'approve' ? 'Shortlist approved and persisted! Candidates queued for outreach.' : 'Proposal dismissed.');
+      }
+    } catch {
+      setAgentActionStatus('Action could not be persisted.');
+    }
+  };
 
   if (!isOpen || !brief) return null;
 
@@ -60,13 +108,82 @@ export const ExplainableMatchModal: React.FC<ExplainableMatchModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRunAutoShortlist}
+              disabled={isAgentRunning}
+              className="px-3 py-1.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              title="Run autonomous shortlist agent grounded on real matching signals and licensing gates"
+            >
+              {isAgentRunning ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-purple-400" />
+                  <span>Evaluating Constraints...</span>
+                </>
+              ) : (
+                <>
+                  <Bot className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Run Auto-Shortlist Agent</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+
+        {/* Autonomous Shortlist Proposal Banner (When run) */}
+        {agentProposal && (
+          <div className="p-4 bg-purple-950/20 border-b border-purple-500/20 text-xs">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 uppercase">
+                    Agent Shortlist Proposal
+                  </span>
+                  <span className="text-zinc-400 font-mono text-[11px]">
+                    Status: <strong className="text-zinc-200 capitalize">{agentProposal.status}</strong>
+                  </span>
+                </div>
+                <p className="text-zinc-300 leading-relaxed font-normal">
+                  Evaluated {agentProposal.evaluatedCandidatesCount} creators. Autonomous agent recommends {agentProposal.shortlist.length} candidate(s) meeting creative and commercial constraints: {agentProposal.shortlist.map(s => `${s.creator.name} (${s.matchScore}% - ${s.licensingStatus})`).join(', ')}.
+                </p>
+                {agentProposal.excludedCandidates.length > 0 && (
+                  <p className="text-[11px] text-amber-300/90 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-amber-400 shrink-0" />
+                    <span>Excluded from shortlist: {agentProposal.excludedCandidates.map(e => `${e.creatorName} (${e.reason})`).join(', ')}</span>
+                  </p>
+                )}
+              </div>
+
+              {agentProposal.status === 'PROPOSED' && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleProposalAction('approve')}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs flex items-center gap-1 transition-colors"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Approve Shortlist</span>
+                  </button>
+                  <button
+                    onClick={() => handleProposalAction('reject')}
+                    className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-750 text-zinc-300 text-xs transition-colors"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+            </div>
+            {agentActionStatus && (
+              <p className="mt-2 text-[11px] font-medium text-emerald-400">{agentActionStatus}</p>
+            )}
+          </div>
+        )}
 
         {/* Main Content (Split view: Left list of matches, Right details & explanation) */}
         <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-zinc-800">

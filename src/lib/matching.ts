@@ -1,5 +1,16 @@
-import { Creator, Brief } from '../types';
+import { Creator, Brief, LicensingStatus } from '../types';
+import { evaluateLicensingCompatibility } from './licensing';
 
+export interface FactorScoreBreakdown {
+  contentFit: number;           // 25%
+  styleAndFormat: number;       // 20%
+  skillsAndTools: number;       // 15%
+  portfolioEvidence: number;    // 20%
+  trustSignals: number;         // 10%
+  commercialCompatibility: number; // 10%
+}
+
+// Backward-compatible category interface for Round 1 consumers
 export interface MatchCategoryScores {
   semanticScore: number;
   skillScore: number;
@@ -8,141 +19,344 @@ export interface MatchCategoryScores {
   formatScore: number;
   commercialScore: number;
   experienceScore: number;
+  // Round 2 factors:
+  contentFit?: number;
+  styleAndFormat?: number;
+  skillsAndTools?: number;
+  portfolioEvidence?: number;
+  trustSignals?: number;
+  commercialCompatibility?: number;
 }
 
 export interface CreatorMatchCalculation {
   creatorId: string;
   creator: Creator;
+  rank?: number;
   finalScore: number;
+  factors: FactorScoreBreakdown;
   categories: MatchCategoryScores;
   reasons: string[];
+  positiveEvidence: string[];
+  missingMatches: string[];
+  matchedTools: string[];
+  matchedSkills: string[];
+  matchedPortfolioIds: string[];
+  licensingStatus: LicensingStatus;
+  licensingSummary: string;
+  trustEvidence: string[];
+  recommendedNextAction: string;
 }
 
+export interface MatchRunResult {
+  briefId: string;
+  briefTitle: string;
+  totalEvaluated: number;
+  hasStrongMatch: boolean;
+  status: 'STRONG_MATCHES_FOUND' | 'NO_STRONG_MATCH' | 'CONFLICTING_BRIEF';
+  statusExplanation?: string;
+  relaxationSuggestions?: string[];
+  matches: CreatorMatchCalculation[];
+}
+
+export const MATCH_WEIGHTS = {
+  contentFit: 0.25,
+  styleAndFormat: 0.20,
+  skillsAndTools: 0.15,
+  portfolioEvidence: 0.20,
+  trustSignals: 0.10,
+  commercialCompatibility: 0.10,
+};
+
+export const MATCHING_WEIGHTS = MATCH_WEIGHTS;
+
 export function computeCreatorMatch(brief: Brief, creator: Creator): CreatorMatchCalculation {
-  // 1. Semantic / Intent Similarity (40% weight)
-  const briefText = `${brief.title} ${brief.description} ${brief.rawIdea || ''} ${brief.style}`.toLowerCase();
-  const briefWords = Array.from(new Set(briefText.split(/[^\w]+/).filter(w => w.length > 2)));
+  const reasons: string[] = [];
+  const positiveEvidence: string[] = [];
+  const missingMatches: string[] = [];
+  const matchedTools: string[] = [];
+  const matchedSkills: string[] = [];
+  const matchedPortfolioIds: string[] = [];
+  const trustEvidence: string[] = [];
 
-  const creatorText = `${creator.specialization} ${creator.bio} ${creator.skills.join(' ')} ${creator.portfolio.map(p => `${p.title} ${p.workflowDescription} ${p.promptSnippet || ''}`).join(' ')}`.toLowerCase();
-  
-  let matchedWordCount = 0;
-  briefWords.forEach(word => {
-    if (creatorText.includes(word)) {
-      matchedWordCount++;
-    }
-  });
+  // ==========================================================================
+  // FACTOR 1: CONTENT FIT (25%)
+  // Medium, Specialization, Industry, Output Type
+  // ==========================================================================
+  let contentFitScore = 50; // Neutral baseline
+  const briefContent = (brief.contentType || '').toLowerCase();
+  const spec = (creator.specialization || '').toLowerCase();
+  const bio = (creator.bio || '').toLowerCase();
 
-  const rawSemanticRatio = briefWords.length > 0 ? matchedWordCount / briefWords.length : 0.5;
-  // Scale semantic ratio dynamically between 40 and 98 for realistic scoring
-  const semanticScore = Math.min(99, Math.max(45, Math.round(rawSemanticRatio * 120 + 35)));
+  const isVideoBrief = briefContent.includes('video') || briefContent.includes('film') || briefContent.includes('commercial');
+  const isImageBrief = briefContent.includes('image') || briefContent.includes('photo') || briefContent.includes('packshot');
+  const isAudioBrief = briefContent.includes('audio') || briefContent.includes('voice') || briefContent.includes('sonic');
 
-  // 2. Skills Match (20% weight)
-  const requiredSkills = brief.requiredSkills && brief.requiredSkills.length > 0
-    ? brief.requiredSkills
-    : [brief.contentType, brief.style];
-
-  const matchedSkills = requiredSkills.filter((sk: string) => 
-    creator.skills.some(cs => cs.toLowerCase().includes(sk.toLowerCase()) || sk.toLowerCase().includes(cs.toLowerCase())) ||
-    creator.specialization.toLowerCase().includes(sk.toLowerCase())
-  );
-
-  const skillRatio = requiredSkills.length > 0 ? matchedSkills.length / requiredSkills.length : 0.8;
-  const skillScore = Math.min(100, Math.max(50, Math.round(skillRatio * 100)));
-
-  // 3. Tools / Models Match (15% weight)
-  const requiredTools = brief.requiredTools || [];
-  const matchedTools = requiredTools.filter(t => 
-    creator.tools.some(ct => ct.toLowerCase() === t.toLowerCase()) ||
-    creator.portfolio.some(p => p.specificModel?.toLowerCase().includes(t.toLowerCase()))
-  );
-
-  const toolRatio = requiredTools.length > 0 ? matchedTools.length / requiredTools.length : 0.7;
-  const toolScore = Math.min(100, Math.max(40, Math.round(toolRatio * 100)));
-
-  // 4. Content-Type Match (10% weight)
-  const hasMatchingPortfolioType = creator.portfolio.some(p => {
-    if (brief.contentType.toLowerCase().includes('video') && p.type === 'video') return true;
-    if (brief.contentType.toLowerCase().includes('image') && p.type === 'image') return true;
-    if (brief.contentType.toLowerCase().includes('audio') && p.type === 'audio') return true;
+  const hasMatchingPortfolioMedium = creator.portfolio.some(p => {
+    if (isVideoBrief && p.type === 'video') return true;
+    if (isImageBrief && p.type === 'image') return true;
+    if (isAudioBrief && p.type === 'audio') return true;
     return false;
   });
 
-  const contentTypeScore = hasMatchingPortfolioType || creator.specialization.toLowerCase().includes(brief.contentType.toLowerCase())
-    ? 95
-    : 60;
+  if (hasMatchingPortfolioMedium) {
+    contentFitScore += 30;
+    positiveEvidence.push(`Portfolio contains verified ${brief.contentType} commercial showcases.`);
+  } else {
+    missingMatches.push(`No exact ${brief.contentType} media assets in active portfolio.`);
+  }
 
-  // 5. Format & Style Match (5% weight)
-  const styleMatch = creator.portfolio.some(p => p.aspectRatio === brief.aspectRatio) ||
-    creator.bio.toLowerCase().includes(brief.style.toLowerCase()) ||
-    creator.specialization.toLowerCase().includes(brief.style.toLowerCase());
-  const formatScore = styleMatch ? 95 : 65;
+  if (spec.includes(briefContent) || (isVideoBrief && (spec.includes('filmmaker') || spec.includes('director')))) {
+    contentFitScore += 20;
+    positiveEvidence.push(`Specialization "${creator.specialization}" directly targets ${brief.contentType}.`);
+  } else if (bio.includes(briefContent)) {
+    contentFitScore += 10;
+  }
+  contentFitScore = Math.min(100, Math.max(25, contentFitScore));
 
-  // 6. Commercial-Use Compatibility (5% weight)
-  const commercialScore = (creator.isVerified || creator.verifiedDetails?.commercialRightsGuaranteed) ? 100 : 70;
+  // ==========================================================================
+  // FACTOR 2: STYLE AND FORMAT (20%)
+  // Aspect ratio, Orientation, Duration, Aesthetic
+  // ==========================================================================
+  let styleAndFormatScore = 50;
+  const targetRatio = brief.aspectRatio || '16:9';
+  const targetStyle = (brief.style || '').toLowerCase();
 
-  // 7. Experience / Portfolio Evidence (5% weight)
-  const ratingPart = (creator.rating / 5.0) * 50;
-  const projectPart = Math.min(30, creator.completedProjects * 0.6);
-  const portfolioPart = Math.min(20, creator.portfolio.length * 7);
-  const experienceScore = Math.min(100, Math.round(ratingPart + projectPart + portfolioPart));
+  const hasExactRatioWork = creator.portfolio.some(p => p.aspectRatio === targetRatio);
+  if (hasExactRatioWork) {
+    styleAndFormatScore += 30;
+    positiveEvidence.push(`Demonstrated proficiency in requested ${targetRatio} format.`);
+  } else {
+    missingMatches.push(`Lacks verified portfolio samples in target ${targetRatio} aspect ratio.`);
+  }
 
-  // Final Score (Weighted 40 / 20 / 15 / 10 / 5 / 5 / 5)
-  const finalScore = Math.min(99, Math.round(
-    0.40 * semanticScore +
-    0.20 * skillScore +
-    0.15 * toolScore +
-    0.10 * contentTypeScore +
-    0.05 * formatScore +
-    0.05 * commercialScore +
-    0.05 * experienceScore
-  ));
+  const styleWords = targetStyle.split(/[^\w]+/).filter(w => w.length > 3);
+  let styleOverlap = 0;
+  creator.portfolio.forEach(p => {
+    const desc = `${p.title} ${p.workflowDescription || ''} ${p.style || ''}`.toLowerCase();
+    styleWords.forEach(sw => {
+      if (desc.includes(sw)) styleOverlap++;
+    });
+  });
 
-  // Dynamic Reasons Generation (Empirical)
-  const reasons: string[] = [];
+  if (styleOverlap > 0 || bio.includes(targetStyle) || spec.includes(targetStyle)) {
+    styleAndFormatScore += 20;
+    positiveEvidence.push(`Aesthetic matches requested "${brief.style}" visual style.`);
+  }
+  styleAndFormatScore = Math.min(100, Math.max(30, styleAndFormatScore));
 
+  // ==========================================================================
+  // FACTOR 3: SKILLS AND TOOLS (15%)
+  // Required tools, models, verification evidence
+  // ==========================================================================
+  const reqTools = brief.requiredTools || [];
+  reqTools.forEach(rt => {
+    const hasTool = creator.tools.some(ct => ct.toLowerCase() === rt.toLowerCase()) ||
+      creator.portfolio.some(p => (p.specificModel || '').toLowerCase().includes(rt.toLowerCase()));
+    if (hasTool) {
+      matchedTools.push(rt);
+    } else {
+      missingMatches.push(`Missing certified workflow in ${rt}.`);
+    }
+  });
+
+  const toolRatio = reqTools.length > 0 ? matchedTools.length / reqTools.length : 0.8;
+  const reqSkills = brief.requiredSkills && brief.requiredSkills.length > 0
+    ? brief.requiredSkills
+    : [brief.contentType, brief.style];
+
+  reqSkills.forEach(rs => {
+    const hasSkill = creator.skills.some(cs => cs.toLowerCase().includes(rs.toLowerCase()) || rs.toLowerCase().includes(cs.toLowerCase())) ||
+      spec.includes(rs.toLowerCase());
+    if (hasSkill) matchedSkills.push(rs);
+  });
+  const skillRatio = reqSkills.length > 0 ? matchedSkills.length / reqSkills.length : 0.8;
+
+  const skillsAndToolsScore = Math.min(100, Math.max(30, Math.round(toolRatio * 60 + skillRatio * 40)));
   if (matchedTools.length > 0) {
-    reasons.push(`Uses requested generative tools: ${matchedTools.join(', ')}`);
+    positiveEvidence.push(`Proficient in requested AI tools: ${matchedTools.join(', ')}.`);
   }
 
-  if (creator.specialization.toLowerCase().includes('director') || creator.specialization.toLowerCase().includes('filmmaker') || creator.completedProjects > 30) {
-    reasons.push(`Strong commercial track record with ${creator.completedProjects} completed campaigns`);
+  // ==========================================================================
+  // FACTOR 4: PORTFOLIO EVIDENCE (20%)
+  // Similar items, workflow steps, prompt snippets, client track record
+  // ==========================================================================
+  let portfolioEvidenceScore = 40;
+  creator.portfolio.forEach(p => {
+    let relevance = 0;
+    if (p.aspectRatio === targetRatio) relevance++;
+    if (isVideoBrief && p.type === 'video') relevance++;
+    if (reqTools.some(t => (p.specificModel || '').toLowerCase().includes(t.toLowerCase()))) relevance++;
+    if (p.steps && p.steps.length > 0) relevance++;
+
+    if (relevance >= 2) {
+      matchedPortfolioIds.push(p.id);
+    }
+  });
+
+  if (matchedPortfolioIds.length > 0) {
+    portfolioEvidenceScore += Math.min(40, matchedPortfolioIds.length * 20);
+    positiveEvidence.push(`${matchedPortfolioIds.length} directly comparable portfolio campaign(s) on file.`);
   }
 
-  if (hasMatchingPortfolioType) {
-    reasons.push(`Portfolio contains verified ${brief.contentType} commercial showcases`);
+  const projectReputation = Math.min(20, Math.round((creator.completedProjects / 40) * 20));
+  portfolioEvidenceScore = Math.min(100, portfolioEvidenceScore + projectReputation);
+
+  // ==========================================================================
+  // FACTOR 5: TRUST SIGNALS & VERIFICATION (10%)
+  // Audited pipeline, safety score, platform verification
+  // ==========================================================================
+  let trustSignalsScore = 40;
+  if (creator.isVerified) {
+    trustSignalsScore += 25;
+    trustEvidence.push('Platform Identity Verified');
+  }
+  if (creator.verification?.certifiedPipeline || creator.verifiedDetails?.certifiedPipeline) {
+    trustSignalsScore += 25;
+    trustEvidence.push('Audited Pipeline Checkpoints Certified');
+  }
+  if (creator.verification?.commercialRightsGuaranteed || creator.verifiedDetails?.commercialRightsGuaranteed) {
+    trustSignalsScore += 10;
+    trustEvidence.push('Commercial IP Indemnity Guarantee');
+  }
+  trustSignalsScore = Math.min(100, trustSignalsScore);
+
+  // ==========================================================================
+  // FACTOR 6: COMMERCIAL-USE COMPATIBILITY (10%)
+  // Rights evaluation via decoupled licensing engine
+  // ==========================================================================
+  const licensingEval = evaluateLicensingCompatibility(brief, creator);
+  let commercialScore = 50;
+  if (licensingEval.status === 'COMPATIBLE') {
+    commercialScore = 100;
+    positiveEvidence.push('Full commercial licensing alignment (Territory & Channels).');
+  } else if (licensingEval.status === 'NEEDS_REVIEW' || licensingEval.status === 'UNKNOWN') {
+    commercialScore = 65;
+    missingMatches.push('Licensing details incomplete; manual review required.');
+  } else {
+    commercialScore = 30;
+    missingMatches.push(`Licensing conflict: ${licensingEval.conflicts.join(', ')}`);
   }
 
-  if (creator.portfolio.some(p => p.aspectRatio === brief.aspectRatio)) {
-    reasons.push(`Supports requested ${brief.aspectRatio} format`);
+  // ==========================================================================
+  // FINAL SCORE COMPUTATION (Normalized sum of weights)
+  // ==========================================================================
+  const finalScore = Math.min(99, Math.max(35, Math.round(
+    MATCH_WEIGHTS.contentFit * contentFitScore +
+    MATCH_WEIGHTS.styleAndFormat * styleAndFormatScore +
+    MATCH_WEIGHTS.skillsAndTools * skillsAndToolsScore +
+    MATCH_WEIGHTS.portfolioEvidence * portfolioEvidenceScore +
+    MATCH_WEIGHTS.trustSignals * trustSignalsScore +
+    MATCH_WEIGHTS.commercialCompatibility * commercialScore
+  )));
+
+  // Synthesis of top empirical reasons
+  reasons.push(...positiveEvidence.slice(0, 3));
+  if (reasons.length < 3 && creator.completedProjects > 20) {
+    reasons.push(`Commercial track record of ${creator.completedProjects} campaigns rated ${creator.rating}★.`);
   }
 
-  if (creator.verifiedDetails?.commercialRightsGuaranteed || creator.isVerified) {
-    reasons.push('Full IP commercial buyout rights & seed auditing certified');
-  }
-
-  if (reasons.length < 3) {
-    reasons.push(`Rated ${creator.rating}★ across ${creator.reviewCount} brand reviews`);
+  let recommendedNextAction = 'Add creator to shortlist for commercial review.';
+  if (finalScore >= 85 && licensingEval.compatible) {
+    recommendedNextAction = 'Top recommendation: initiate direct commission proposal.';
+  } else if (!licensingEval.compatible) {
+    recommendedNextAction = 'Resolve licensing territory/channel differences before commissioning.';
+  } else if (finalScore < 70) {
+    recommendedNextAction = 'Review portfolio steps or request custom visual sample.';
   }
 
   return {
     creatorId: creator.id,
     creator,
     finalScore,
+    factors: {
+      contentFit: contentFitScore,
+      styleAndFormat: styleAndFormatScore,
+      skillsAndTools: skillsAndToolsScore,
+      portfolioEvidence: portfolioEvidenceScore,
+      trustSignals: trustSignalsScore,
+      commercialCompatibility: commercialScore,
+    },
+    // Backward compatibility for existing UI modal
     categories: {
-      semanticScore,
-      skillScore,
-      toolScore,
-      contentTypeScore,
-      formatScore,
+      semanticScore: contentFitScore,
+      skillScore: skillsAndToolsScore,
+      toolScore: skillsAndToolsScore,
+      contentTypeScore: contentFitScore,
+      formatScore: styleAndFormatScore,
       commercialScore,
-      experienceScore,
+      experienceScore: portfolioEvidenceScore,
+      contentFit: contentFitScore,
+      styleAndFormat: styleAndFormatScore,
+      skillsAndTools: skillsAndToolsScore,
+      portfolioEvidence: portfolioEvidenceScore,
+      trustSignals: trustSignalsScore,
+      commercialCompatibility: commercialScore,
     },
     reasons,
+    positiveEvidence,
+    missingMatches,
+    matchedTools,
+    matchedSkills,
+    matchedPortfolioIds,
+    licensingStatus: licensingEval.status,
+    licensingSummary: licensingEval.summary,
+    trustEvidence,
+    recommendedNextAction,
   };
 }
 
 export function rankCreatorsForBrief(brief: Brief, creators: Creator[]): CreatorMatchCalculation[] {
   return creators
     .map(creator => computeCreatorMatch(brief, creator))
-    .sort((a, b) => b.finalScore - a.finalScore);
+    .sort((a, b) => b.finalScore - a.finalScore)
+    .map((m, index) => ({ ...m, rank: index + 1 }));
+}
+
+export function evaluateBriefMatchingRun(brief: Brief, creators: Creator[]): MatchRunResult {
+  // Check for internal brief contradictions
+  if (brief.aspectRatio === '9:16' && brief.deliverables?.some(d => d.toLowerCase().includes('landscape'))) {
+    return {
+      briefId: brief.id,
+      briefTitle: brief.title,
+      totalEvaluated: creators.length,
+      hasStrongMatch: false,
+      status: 'CONFLICTING_BRIEF',
+      statusExplanation: 'Brief requires conflicting aspect ratios (Vertical 9:16 target with Landscape deliverables). Clarify master orientation.',
+      relaxationSuggestions: [
+        'Unify deliverables to vertical 9:16 format.',
+        'Request dual master cuts (vertical reels + horizontal broadcast).'
+      ],
+      matches: []
+    };
+  }
+
+  const ranked = rankCreatorsForBrief(brief, creators);
+  const strongMatches = ranked.filter(m => m.finalScore >= 70);
+
+  if (strongMatches.length === 0) {
+    return {
+      briefId: brief.id,
+      briefTitle: brief.title,
+      totalEvaluated: creators.length,
+      hasStrongMatch: false,
+      status: 'NO_STRONG_MATCH',
+      statusExplanation: 'No creator achieved a strong matching threshold (>=70%) with all mandatory tools and format criteria.',
+      relaxationSuggestions: [
+        `Broaden tool requirements beyond "${brief.requiredTools?.join(', ')}".`,
+        `Allow flexible aspect ratios or adapt from 16:9 master keyframes.`,
+        `Extend delivery timeline to allow specialized pipeline calibration.`
+      ],
+      matches: ranked
+    };
+  }
+
+  return {
+    briefId: brief.id,
+    briefTitle: brief.title,
+    totalEvaluated: creators.length,
+    hasStrongMatch: true,
+    status: 'STRONG_MATCHES_FOUND',
+    statusExplanation: `${strongMatches.length} creator(s) satisfy technical and creative compatibility standards.`,
+    matches: ranked
+  };
 }

@@ -68,6 +68,7 @@ export interface ICreator extends Document {
   reviewCount: number;
   completedProjects: number;
   commercialUse?: string;
+  licensingTerms?: any;
   isVerified: boolean;
   verification?: IVerificationSignals;
   verifiedDetails?: IVerificationSignals;
@@ -141,6 +142,7 @@ const CreatorSchema = new Schema<ICreator>({
   reviewCount: { type: Number, default: 1 },
   completedProjects: { type: Number, default: 0 },
   commercialUse: { type: String, default: 'Full Buyout' },
+  licensingTerms: Schema.Types.Mixed,
   isVerified: { type: Boolean, default: true },
   verification: {
     certifiedPipeline: String,

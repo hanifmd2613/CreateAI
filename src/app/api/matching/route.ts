@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '../../../lib/mongodb';
 import { BriefModel } from '../../../lib/models/Brief';
 import { CreatorModel } from '../../../lib/models/Creator';
-import { rankCreatorsForBrief, computeCreatorMatch } from '../../../lib/matching';
+import { evaluateBriefMatchingRun, rankCreatorsForBrief } from '../../../lib/matching';
 import { INITIAL_BRIEFS, MOCK_CREATORS } from '../../../data/mockData';
 import { Brief, Creator } from '../../../types';
 
@@ -17,10 +17,12 @@ export async function POST(req: NextRequest) {
     // 1. Fetch target brief
     if (!brief && briefId) {
       if (conn) {
-        const foundBrief = await BriefModel.findOne({ id: briefId }).lean();
-        if (foundBrief) {
-          brief = foundBrief;
-        }
+        try {
+          const foundBrief = await BriefModel.findOne({ id: briefId }).lean();
+          if (foundBrief) {
+            brief = foundBrief;
+          }
+        } catch (e) {}
       }
       if (!brief) {
         brief = INITIAL_BRIEFS.find(b => b.id === briefId);
@@ -40,25 +42,31 @@ export async function POST(req: NextRequest) {
     // 2. Fetch creators list
     let creatorsList: Creator[] = [];
     if (conn) {
-      const dbCreators = await CreatorModel.find({}).lean();
-      if (dbCreators && dbCreators.length > 0) {
-        creatorsList = dbCreators as any[];
-      }
+      try {
+        const dbCreators = await CreatorModel.find({}).lean();
+        if (dbCreators && dbCreators.length > 0) {
+          creatorsList = dbCreators as any[];
+        }
+      } catch (e) {}
     }
 
     if (creatorsList.length === 0) {
       creatorsList = MOCK_CREATORS;
     }
 
-    // 3. Compute ranked matches using deterministic hybrid scoring algorithm
-    const rankedMatches = rankCreatorsForBrief(brief, creatorsList);
+    // 3. Evaluate matching run with 6-factor normalized engine and edge case detection
+    const runResult = evaluateBriefMatchingRun(brief, creatorsList);
 
     return NextResponse.json({
       success: true,
       briefId: brief.id || 'custom-brief',
       briefTitle: brief.title,
       totalCreatorsEvaluated: creatorsList.length,
-      matches: rankedMatches.map(m => ({
+      hasStrongMatch: runResult.hasStrongMatch,
+      status: runResult.status,
+      statusExplanation: runResult.statusExplanation,
+      relaxationSuggestions: runResult.relaxationSuggestions,
+      matches: runResult.matches.map(m => ({
         creatorId: m.creatorId,
         creator: {
           id: m.creator.id,
@@ -75,9 +83,20 @@ export async function POST(req: NextRequest) {
           verification: m.creator.verification,
           portfolio: m.creator.portfolio.slice(0, 2),
         },
+        rank: m.rank,
         finalScore: m.finalScore,
+        factors: m.factors,
         categoryScores: m.categories,
         reasons: m.reasons,
+        positiveEvidence: m.positiveEvidence,
+        missingMatches: m.missingMatches,
+        matchedTools: m.matchedTools,
+        matchedSkills: m.matchedSkills,
+        matchedPortfolioIds: m.matchedPortfolioIds,
+        licensingStatus: m.licensingStatus,
+        licensingSummary: m.licensingSummary,
+        trustEvidence: m.trustEvidence,
+        recommendedNextAction: m.recommendedNextAction,
       }))
     });
 
@@ -113,11 +132,13 @@ export async function GET(req: NextRequest) {
     let creatorsList: Creator[] = [];
 
     if (conn) {
-      const foundBrief = await BriefModel.findOne({ id: briefId }).lean();
-      if (foundBrief) brief = foundBrief as any;
+      try {
+        const foundBrief = await BriefModel.findOne({ id: briefId }).lean();
+        if (foundBrief) brief = foundBrief as any;
 
-      const dbCreators = await CreatorModel.find({}).lean();
-      if (dbCreators && dbCreators.length > 0) creatorsList = dbCreators as any[];
+        const dbCreators = await CreatorModel.find({}).lean();
+        if (dbCreators && dbCreators.length > 0) creatorsList = dbCreators as any[];
+      } catch (e) {}
     }
 
     if (!brief) {
@@ -138,18 +159,25 @@ export async function GET(req: NextRequest) {
       }, { status: 404 });
     }
 
-    const rankedMatches = rankCreatorsForBrief(brief, creatorsList);
+    const runResult = evaluateBriefMatchingRun(brief, creatorsList);
 
     return NextResponse.json({
       success: true,
       briefId,
       briefTitle: brief.title,
-      matches: rankedMatches.map(m => ({
+      hasStrongMatch: runResult.hasStrongMatch,
+      status: runResult.status,
+      statusExplanation: runResult.statusExplanation,
+      matches: runResult.matches.map(m => ({
         creatorId: m.creatorId,
         creatorName: m.creator.name,
+        rank: m.rank,
         finalScore: m.finalScore,
+        factors: m.factors,
         categoryScores: m.categories,
         reasons: m.reasons,
+        licensingStatus: m.licensingStatus,
+        licensingSummary: m.licensingSummary,
       }))
     });
 

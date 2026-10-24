@@ -27,15 +27,41 @@ export const HireModal: React.FC<HireModalProps> = ({
   const [projectMessage, setProjectMessage] = useState(`Hi ${creator.name}, we would like to commission you for an upcoming commercial campaign using ${creator.tools[0]}.`);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
+      const activeBrief = briefs.find(b => b.id === selectedBriefId);
+      const title = selectedBriefId === 'custom' ? (customTitle || 'Direct Commission') : (activeBrief?.title || 'Commercial Campaign');
+      const budget = selectedBriefId === 'custom' ? customBudget : (activeBrief?.budget || customBudget);
+
+      const res = await fetch('/api/engagements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          briefId: selectedBriefId === 'custom' ? undefined : selectedBriefId,
+          creatorId: creator.id,
+          brandId: 'user-brand-kaveri',
+          brandName: 'Kaveri Creative Studios',
+          creatorName: creator.name,
+          projectTitle: title,
+          budget,
+          initialMessage: projectMessage,
+        })
+      });
+
+      if (res.ok) {
+        onSuccess(`Commission offer sent to ${creator.name}! Engagement initiated in Workspace.`);
+      } else {
+        onSuccess(`Commission inquiry sent to ${creator.name}.`);
+      }
+    } catch {
+      onSuccess(`Commission inquiry logged for ${creator.name}.`);
+    } finally {
       setIsSubmitting(false);
-      onSuccess(`Commission inquiry sent to ${creator.name}.`);
       onClose();
-    }, 600);
+    }
   };
 
   const handleModalMouseMove = (e: React.MouseEvent<HTMLElement>) => {

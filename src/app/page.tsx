@@ -15,6 +15,7 @@ import { ChatModal } from '../components/ChatModal';
 import { SystemAssistantModal } from '../components/SystemAssistantModal';
 import { ApiConfigModal } from '../components/ApiConfigModal';
 import { ExplainableMatchModal } from '../components/ExplainableMatchModal';
+import { EngagementWorkspace } from '../components/EngagementWorkspace';
 import { FadeInSection } from '../components/FadeInSection';
 import { 
   MOCK_CREATORS, 
@@ -1006,6 +1007,16 @@ export default function Home() {
           </FadeInSection>
         )}
 
+        {/* VIEW 5: ROUND 2 ENGAGEMENT WORKSPACE & DELIVERY CHECKER */}
+        {currentView === 'workspace' && (
+          <FadeInSection delayMs={20} className="w-full">
+            <EngagementWorkspace
+              currentUser={currentUser}
+              onBack={() => setCurrentView('discovery')}
+            />
+          </FadeInSection>
+        )}
+
       </main>
 
       {/* Direct Client ⇄ Employee Creator Chat Modal */}
@@ -1109,6 +1120,7 @@ export default function Home() {
             <button onClick={() => setCurrentView('discovery')} className="hover:text-white transition-colors">Discover</button>
             <button onClick={() => setCurrentView('brief-builder')} className="hover:text-white transition-colors">Brief Co-Pilot</button>
             <button onClick={() => setCurrentView('briefs-feed')} className="hover:text-white transition-colors">Campaign Briefs</button>
+            <button onClick={() => setCurrentView('workspace')} className="hover:text-emerald-400 text-emerald-400 font-medium transition-colors">Workspace</button>
             <button onClick={() => handleOpenChat()} className="hover:text-white transition-colors">Direct Messages</button>
             <button onClick={() => setSystemAssistantOpen(true)} className="hover:text-emerald-400 transition-colors">AI Assistant</button>
             <span className="text-zinc-600">© 2025 GenCraft</span>
