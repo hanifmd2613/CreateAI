@@ -22,6 +22,8 @@ interface AuthModalProps {
   onClose: () => void;
   currentUser: UserAccount | null;
   onLoginSuccess: (user: UserAccount, newCreator?: Creator) => void;
+  initialMode?: 'login' | 'signup' | 'reset';
+  initialRole?: UserRole;
 }
 
 const AVATAR_PRESETS = [
@@ -36,9 +38,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   currentUser,
   onLoginSuccess,
+  initialMode,
+  initialRole,
 }) => {
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'reset'>('signup');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('creator');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'reset'>(initialMode || 'signup');
+  const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole || 'creator');
+
+  React.useEffect(() => {
+    if (initialMode) setAuthMode(initialMode);
+    if (initialRole) setSelectedRole(initialRole);
+  }, [initialMode, initialRole, isOpen]);
   
   // Login fields
   const [loginEmail, setLoginEmail] = useState('');

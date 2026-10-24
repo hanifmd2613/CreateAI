@@ -64,6 +64,48 @@ const demoEngagement: EngagementRecord = {
 };
 engagementsMemory.set(SEED_ENGAGEMENT_ID, demoEngagement);
 
+// Initialize realistic demo pending proposal in CONTACTED status
+export const SEED_CONTACTED_ENGAGEMENT_ID = 'eng-proposal-nandi-ev';
+export const demoContactedEngagement: EngagementRecord = {
+  id: SEED_CONTACTED_ENGAGEMENT_ID,
+  briefId: 'brief-1',
+  brandId: 'brand-nandi-ev',
+  brandName: 'Nandi EV Technologies (Bengaluru)',
+  brandAvatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=NandiEV',
+  creatorId: 'creator-1',
+  creatorName: 'Karthik Subramanian',
+  creatorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=KarthikSubramanian&gender=male&hairColor=000000&facialHairProbability=60&accessoriesProbability=20',
+  projectTitle: 'Next-Gen Electric Supercar 30s Reveal Spot',
+  proposedBudget: '₹5,20,000',
+  status: 'CONTACTED',
+  licensingStatus: 'COMPATIBLE',
+  message: 'Hi Karthik, we were thoroughly impressed by your Veo and Kling automotive motion reels. We would like to commission a 30-second hyperrealistic reveal spot for our upcoming electric hypercar, including 4K masters and 9:16 vertical cuts for social.',
+  milestones: [
+    { title: 'Concept Keyframes & Seed Checkpoints', amount: '₹2,60,000 (50%)', status: 'Pending' },
+    { title: 'Final 4K Master & IP Buyout Delivery', amount: '₹2,60,000 (50%)', status: 'Pending' }
+  ],
+  agreedTerms: {
+    confirmedBudget: '₹5,20,000',
+    confirmedDeadline: '5 Days',
+    maxRevisionRounds: 2,
+    licensingTerms: {
+      commercialScope: 'Full Buyout',
+      territory: 'Worldwide',
+      durationMonths: 12,
+      channels: ['Paid Advertising', 'Organic Social', 'Digital / Web'],
+      exclusivity: 'Category Exclusive',
+      derivativeRights: true,
+    },
+    scopeSummary: '30-second master 4K reveal film and 15s 9:16 vertical cut with worldwide commercial buyout rights.'
+  },
+  currentVersionNumber: 0,
+  maxRevisions: 2,
+  revisionsUsed: 0,
+  createdAt: new Date(Date.now() - 3600 * 1000 * 6).toISOString(),
+  updatedAt: new Date(Date.now() - 3600 * 1000 * 6).toISOString(),
+};
+engagementsMemory.set(SEED_CONTACTED_ENGAGEMENT_ID, demoContactedEngagement);
+
 // Version 1
 const v1Id = `ver-${SEED_ENGAGEMENT_ID}-v1`;
 const v1Version: DeliverableVersion = {
@@ -232,6 +274,22 @@ auditLogsMemory.push({
   },
 });
 
+auditLogsMemory.push({
+  id: `audit-${SEED_CONTACTED_ENGAGEMENT_ID}-init`,
+  engagementId: SEED_CONTACTED_ENGAGEMENT_ID,
+  briefId: 'brief-1',
+  action: 'ENGAGEMENT_CREATED',
+  actorId: 'brand-nandi-ev',
+  actorName: 'Nandi EV Technologies (Bengaluru)',
+  actorRole: 'brand',
+  timestamp: new Date(Date.now() - 3600 * 1000 * 6).toISOString(),
+  details: {
+    projectTitle: 'Next-Gen Electric Supercar 30s Reveal Spot',
+    budget: '₹5,20,000',
+    creatorId: 'creator-1',
+  },
+});
+
 
 // ============================================================================
 // ENGAGEMENT OPERATIONS
@@ -244,7 +302,23 @@ export async function getEngagements(filter: { creatorId?: string; brandId?: str
       const query: any = {};
       if (filter.creatorId) query.creatorId = filter.creatorId;
       if (filter.brandId) query.brandId = filter.brandId;
-      const docs = await EngagementModel.find(query).sort({ createdAt: -1 }).lean();
+      let docs = await EngagementModel.find(query).sort({ createdAt: -1 }).lean();
+      
+      // Ensure seed proposals exist in DB if DB was initialized prior
+      if (!filter.creatorId || filter.creatorId === 'creator-1') {
+        const hasContacted = docs.some((d: any) => d.id === SEED_CONTACTED_ENGAGEMENT_ID);
+        if (!hasContacted) {
+          try {
+            await EngagementModel.findOneAndUpdate(
+              { id: demoContactedEngagement.id },
+              { ...demoContactedEngagement, createdAt: new Date(demoContactedEngagement.createdAt), updatedAt: new Date(demoContactedEngagement.updatedAt) },
+              { upsert: true }
+            );
+            docs.push(demoContactedEngagement as any);
+          } catch (e) {}
+        }
+      }
+
       if (docs && docs.length > 0) {
         return docs.map((d: any) => ({
           ...d,

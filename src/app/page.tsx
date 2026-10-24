@@ -17,6 +17,7 @@ import { ApiConfigModal } from '../components/ApiConfigModal';
 import { ExplainableMatchModal } from '../components/ExplainableMatchModal';
 import { EngagementWorkspace } from '../components/EngagementWorkspace';
 import { FadeInSection } from '../components/FadeInSection';
+import { LandingPage } from '../components/LandingPage';
 import { 
   MOCK_CREATORS, 
   INITIAL_BRIEFS, 
@@ -102,6 +103,11 @@ export default function Home() {
   // Client ⇄ Employee Direct Chat State
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [chatTargetCreator, setChatTargetCreator] = useState<Creator | null>(null);
+
+  // Landing Page & Guest Exploration State
+  const [isGuestExploring, setIsGuestExploring] = useState(false);
+  const [authModalInitialMode, setAuthModalInitialMode] = useState<'login' | 'signup' | 'reset'>('signup');
+  const [authModalInitialRole, setAuthModalInitialRole] = useState<UserRole>('creator');
 
   // Camera Symbol AI System Assistant State (Gemini powered)
   const [systemAssistantOpen, setSystemAssistantOpen] = useState(false);
@@ -255,6 +261,7 @@ export default function Home() {
   const handleLogout = () => {
     signOutAuthUser();
     setIsAuthenticated(false);
+    setIsGuestExploring(false);
     setCurrentUser(null);
     try {
       localStorage.removeItem('gencraft_is_authenticated');
@@ -432,18 +439,33 @@ export default function Home() {
     return creators.filter(c => savedCreatorIds.includes(c.id));
   }, [creators, savedCreatorIds]);
 
-  // REQUIREMENT: If not authenticated, always show the full-screen Login/Register Gate first!
-  if (authLoaded && !isAuthenticated) {
+  // Public landing page before login for unauthenticated visitors
+  if (authLoaded && !isAuthenticated && !isGuestExploring) {
     return (
-      <AuthGate
-        onAuthSuccess={(user, newCreator) => {
-          handleLoginSuccess(user, newCreator);
-        }}
-        onVoiceSpoken={(candidateName) => {
-          setVoiceBanner(`🎙️ AI Voice Bot: "Hello ${candidateName}, and welcome to GenCraft."`);
-          setTimeout(() => setVoiceBanner(null), 6500);
-        }}
-      />
+      <div className="min-h-screen bg-white dark:bg-[#09090B] text-zinc-900 dark:text-zinc-100 transition-colors">
+        <LandingPage
+          onExplore={() => setIsGuestExploring(true)}
+          onOpenAuth={(mode = 'signup', role = 'creator') => {
+            setAuthModalInitialMode(mode);
+            setAuthModalInitialRole(role);
+            setAuthModalOpen(true);
+          }}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+        />
+
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          currentUser={currentUser}
+          initialMode={authModalInitialMode}
+          initialRole={authModalInitialRole}
+          onLoginSuccess={(user, newCreator) => {
+            setAuthModalOpen(false);
+            handleLoginSuccess(user, newCreator);
+          }}
+        />
+      </div>
     );
   }
 
@@ -468,6 +490,15 @@ export default function Home() {
       <Navbar
         currentView={currentView}
         onNavigate={(view) => {
+          if (!currentUser && !isAuthenticated && view === 'discovery' && currentView === 'discovery') {
+            setIsGuestExploring(false);
+            return;
+          }
+          if (!currentUser && (view === 'workspace' || view === 'brief-builder')) {
+            setAuthModalInitialMode('login');
+            setAuthModalOpen(true);
+            return;
+          }
           setCurrentView(view);
           if (view === 'discovery') {
             setSelectedCreator(null);
@@ -1003,6 +1034,8 @@ export default function Home() {
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         currentUser={currentUser}
+        initialMode={authModalInitialMode}
+        initialRole={authModalInitialRole}
         onLoginSuccess={handleLoginSuccess}
       />
 

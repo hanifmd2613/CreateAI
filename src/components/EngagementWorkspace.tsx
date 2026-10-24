@@ -8,7 +8,8 @@ import {
   DeliveryCheckResult,
   AuditLogEntry,
   UserAccount,
-  UserRole
+  UserRole,
+  Brief
 } from '../types';
 import {
   ShieldCheck,
@@ -29,7 +30,12 @@ import {
   User,
   Info,
   Sliders,
-  Award
+  Award,
+  Calendar,
+  DollarSign,
+  Building2,
+  Check,
+  X
 } from 'lucide-react';
 
 interface EngagementWorkspaceProps {
@@ -73,6 +79,14 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
   const [declineModalOpen, setDeclineModalOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
 
+  // Accept Proposal Confirmation Modal
+  const [acceptModalOpen, setAcceptModalOpen] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+
+  // Brief and Workspace View Tab
+  const [selectedBrief, setSelectedBrief] = useState<Brief | null>(null);
+  const [workspaceTab, setWorkspaceTab] = useState<'proposal' | 'production'>('proposal');
+
   const activeRole: UserRole = currentUser?.role || 'brand';
 
   // Load all engagements
@@ -105,10 +119,17 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
       if (res.ok) {
         const data = await res.json();
         setSelectedEngagement(data.engagement);
+        setSelectedBrief(data.brief || null);
         setVersions(data.versions || []);
         setFeedbackList(data.feedback || []);
         setDeliveryChecks(data.deliveryChecks || []);
         setAuditLogs(data.auditLogs || []);
+
+        if (data.engagement?.status === 'CONTACTED' || data.engagement?.status === 'CREATOR_RESPONDED') {
+          setWorkspaceTab('proposal');
+        } else if (data.versions && data.versions.length > 0) {
+          setWorkspaceTab('production');
+        }
 
         if (data.versions && data.versions.length > 0) {
           setSelectedVersion(data.versions[0]);
@@ -131,22 +152,36 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
     setIsActionLoading(true);
 
     try {
+      const actorId = currentUser?.id || (activeRole === 'creator' ? selectedEngagement.creatorId : selectedEngagement.brandId);
+      const actorName = currentUser?.name || (activeRole === 'creator' ? selectedEngagement.creatorName : selectedEngagement.brandName);
+
       const res = await fetch(`/api/engagements/${selectedEngagement.id}/transition`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           targetState,
           actorRole: activeRole,
-          actorId: currentUser?.id || 'user-active',
-          actorName: currentUser?.name || 'Active User',
+          actorId,
+          actorName,
           ...additionalPayload,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        onShowToast(`Engagement advanced to ${targetState}!`);
+        if (targetState === 'CREATOR_ACCEPTED') {
+          onShowToast('🎉 Commission proposal accepted! Engagement moved to formal agreement.');
+        } else if (targetState === 'CREATOR_DECLINED') {
+          onShowToast('Commission proposal declined. Status updated.');
+        } else {
+          onShowToast(`Engagement advanced to ${targetState}!`);
+        }
         await loadEngagementDetails(selectedEngagement.id);
+        const listRes = await fetch('/api/engagements');
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          setEngagements(listData.engagements || []);
+        }
       } else {
         onShowToast(`Action blocked: ${data.error?.message || 'Invalid transition'}`);
       }
@@ -505,19 +540,20 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
               {selectedEngagement.status === 'CONTACTED' && activeRole === 'creator' && (
                 <>
                   <button
-                    onClick={() => handleTransition('CREATOR_ACCEPTED')}
+                    onClick={() => setAcceptModalOpen(true)}
                     disabled={isActionLoading}
-                    className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-md disabled:opacity-50"
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Accept Commission</span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-zinc-950" />
+                    <span>Accept Proposal</span>
                   </button>
                   <button
                     onClick={() => setDeclineModalOpen(true)}
                     disabled={isActionLoading}
-                    className="px-3 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-red-400 hover:bg-red-950/30 text-xs transition-colors"
+                    className="px-3.5 py-1.5 rounded-xl bg-zinc-950 border border-zinc-800 text-red-400 hover:bg-red-950/30 text-xs transition-colors flex items-center gap-1.5"
                   >
-                    Decline
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Decline Proposal</span>
                   </button>
                 </>
               )}
@@ -593,7 +629,342 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
             </div>
           </div>
 
-          {/* Main 2-Column Content: Left Versions & Inspection, Right Feedback & Agreed Scope */}
+          {/* Section Navigation Tabs: Proposal Review vs Production Workspace */}
+          <div className="flex items-center gap-2 border-b border-zinc-800 pb-2">
+            <button
+              type="button"
+              onClick={() => setWorkspaceTab('proposal')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+                workspaceTab === 'proposal'
+                  ? 'bg-white text-zinc-950 shadow-md'
+                  : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Commission Proposal & Terms</span>
+              {selectedEngagement.status === 'CONTACTED' && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setWorkspaceTab('production')}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all ${
+                workspaceTab === 'production'
+                  ? 'bg-white text-zinc-950 shadow-md'
+                  : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Production Deliverables & QA</span>
+              {versions.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-zinc-800 text-zinc-300">
+                  {versions.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* TAB 1: COMMISSION PROPOSAL CARD VIEW */}
+          {workspaceTab === 'proposal' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Main Proposal Card (8 Cols) */}
+              <div className="lg:col-span-8 space-y-6">
+                <div className="p-6 rounded-2xl bg-zinc-900/70 border border-zinc-800 space-y-6 shadow-xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
+                  {/* Proposal Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
+                    <div className="flex items-center gap-3.5">
+                      <img
+                        src={selectedEngagement.brandAvatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${selectedEngagement.brandName}`}
+                        alt={selectedEngagement.brandName}
+                        className="w-12 h-12 rounded-xl object-cover bg-zinc-950 border border-zinc-750 shrink-0"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
+                            Commission Proposal
+                          </span>
+                          <span className="text-xs text-zinc-600">•</span>
+                          <span className="text-xs text-zinc-400">
+                            Received {new Date(selectedEngagement.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        </div>
+                        <h2 className="text-lg font-bold text-white tracking-tight mt-1">
+                          {selectedEngagement.projectTitle}
+                        </h2>
+                        <p className="text-xs text-zinc-400">
+                          Brand / Client: <strong className="text-zinc-200">{selectedEngagement.brandName}</strong>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 rounded-xl text-xs font-mono font-semibold border ${getStatusBadge(selectedEngagement.status)}`}>
+                        {selectedEngagement.status === 'CONTACTED' ? 'Awaiting Decision' : selectedEngagement.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Brand Memo / Message */}
+                  {selectedEngagement.message && (
+                    <div className="p-4 rounded-xl bg-zinc-950/70 border border-zinc-800 space-y-1">
+                      <span className="text-[10px] font-mono uppercase text-zinc-500 block">Proposal Memo from Brand</span>
+                      <p className="text-xs text-zinc-300 italic leading-relaxed">
+                        &ldquo;{selectedEngagement.message}&rdquo;
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Core Terms Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    
+                    {/* Budget & Escrow */}
+                    <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-850 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono uppercase text-zinc-500">Commission Budget</span>
+                        <Award className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <div className="text-xl font-bold font-mono text-white">
+                        {selectedEngagement.proposedBudget}
+                      </div>
+                      <span className="text-[11px] text-zinc-400 block font-mono">
+                        Currency: INR (₹)
+                      </span>
+                    </div>
+
+                    {/* Timeline & Expected Formats */}
+                    <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-850 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono uppercase text-zinc-500">Deadline & Format</span>
+                        <Clock className="w-3.5 h-3.5 text-blue-400" />
+                      </div>
+                      <div className="text-sm font-semibold text-white">
+                        {selectedBrief?.deadline || selectedEngagement.agreedTerms?.confirmedDeadline || '5 Days'}
+                      </div>
+                      <span className="text-[11px] text-zinc-400 block font-mono">
+                        {selectedBrief?.targetSpecs?.aspectRatio || selectedBrief?.aspectRatio || '9:16'} • {selectedBrief?.targetSpecs?.requiredFormat?.toUpperCase() || 'MP4'}
+                      </span>
+                    </div>
+
+                    {/* Commercial Scope */}
+                    <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-850 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono uppercase text-zinc-500">Licensing Scope</span>
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <div className="text-sm font-semibold text-emerald-400">
+                        {selectedBrief?.licensingRequirements?.commercialScope || (selectedEngagement.licensingStatus === 'COMPATIBLE' ? 'Full Buyout' : 'Commercial Licensed')}
+                      </div>
+                      <span className="text-[11px] text-zinc-400 block">
+                        {selectedBrief?.licensingRequirements?.territory || 'Worldwide'} • {selectedBrief?.licensingRequirements?.durationMonths ? `${selectedBrief.licensingRequirements.durationMonths} Mo` : '12 Mo'}
+                      </span>
+                    </div>
+
+                  </div>
+
+                  {/* Payment Terms & Milestones */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-white">Payment Milestones</span>
+                      <span className="text-zinc-500 font-mono text-[11px]">
+                        {(selectedEngagement.milestones?.length || 0)} Tranches
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {(selectedEngagement.milestones && selectedEngagement.milestones.length > 0) ? (
+                        selectedEngagement.milestones.map((m, idx) => (
+                          <div key={idx} className="p-3 rounded-xl bg-zinc-950 border border-zinc-850 flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <span className="text-[10px] font-mono uppercase text-zinc-500">Milestone {idx + 1}</span>
+                              <p className="text-xs font-medium text-white">{m.title}</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="font-mono text-xs font-semibold text-emerald-400 block">{m.amount}</span>
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 font-mono">{m.status}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-2 p-3 rounded-xl bg-zinc-950 border border-zinc-850 text-xs text-zinc-500">
+                          Not specified (Standard 50% upfront escrow / 50% final deliverable clearance).
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Deliverables & Commercial Rights Breakdown */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                    
+                    {/* Deliverables */}
+                    <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-850 space-y-2">
+                      <span className="text-[10px] font-mono uppercase text-zinc-500 block">Deliverables & Specs</span>
+                      <ul className="space-y-1.5 text-xs text-zinc-300">
+                        {(selectedBrief?.deliverables || [
+                          'Master 4K Video (16:9 / 9:16)',
+                          'Deterministic Seed & Generation Workflow Manifest'
+                        ]).map((del, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                            <span>{del}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="pt-1 border-t border-zinc-850 text-[11px] text-zinc-400 flex justify-between">
+                        <span>Max Revisions:</span>
+                        <span className="font-mono text-zinc-200">{selectedEngagement.maxRevisions || 2} Rounds</span>
+                      </div>
+                    </div>
+
+                    {/* Commercial Usage Rights */}
+                    <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-850 space-y-2">
+                      <span className="text-[10px] font-mono uppercase text-zinc-500 block">Usage Rights & Clearance</span>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between py-0.5 border-b border-zinc-850">
+                          <span className="text-zinc-500">Territory:</span>
+                          <span className="text-zinc-200">{selectedBrief?.licensingRequirements?.territory || 'Worldwide'}</span>
+                        </div>
+                        <div className="flex justify-between py-0.5 border-b border-zinc-850">
+                          <span className="text-zinc-500">Channels:</span>
+                          <span className="text-zinc-200 truncate max-w-[200px]">
+                            {selectedBrief?.licensingRequirements?.channels?.join(', ') || 'Paid Advertising, Organic Social, Digital / Web'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between py-0.5 border-b border-zinc-850">
+                          <span className="text-zinc-500">Exclusivity:</span>
+                          <span className="text-zinc-200">{selectedBrief?.licensingRequirements?.exclusivity || 'Category Exclusive'}</span>
+                        </div>
+                        <div className="flex justify-between py-0.5">
+                          <span className="text-zinc-500">Derivative Rights:</span>
+                          <span className="text-emerald-400 font-medium">
+                            {selectedBrief?.licensingRequirements?.derivativeRights !== false ? 'Permitted (Editing / Resizing)' : 'Prohibited'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Card Direct Action Controls for Creator */}
+                  {selectedEngagement.status === 'CONTACTED' && (
+                    <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="text-xs text-zinc-400">
+                        {activeRole === 'creator' ? (
+                          <span>Review the proposal terms above. Accepting will formalize the contract and advance the workflow.</span>
+                        ) : (
+                          <span>Waiting for creator response. The creator has been notified of this commission proposal.</span>
+                        )}
+                      </div>
+
+                      {activeRole === 'creator' && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => setAcceptModalOpen(true)}
+                            disabled={isActionLoading}
+                            className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-lg disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-zinc-950" />
+                            <span>Accept Proposal</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeclineModalOpen(true)}
+                            disabled={isActionLoading}
+                            className="px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-red-900 text-red-400 hover:bg-red-950/20 text-xs transition-colors flex items-center gap-1.5"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Decline Proposal</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* State Banner when already accepted */}
+                  {selectedEngagement.status === 'CREATOR_ACCEPTED' && (
+                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-400">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Commission Proposal Accepted. Next step: Confirm formal scope and lock agreement.</span>
+                      </div>
+                      <button
+                        onClick={handleConfirmAgreement}
+                        disabled={isActionLoading}
+                        className="px-3.5 py-1.5 rounded-lg bg-white text-zinc-950 font-semibold text-xs hover:bg-zinc-200 transition-colors"
+                      >
+                        Lock Agreement & Start Production
+                      </button>
+                    </div>
+                  )}
+
+                  {/* State Banner when declined */}
+                  {selectedEngagement.status === 'CREATOR_DECLINED' && (
+                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-2 text-xs text-red-400">
+                      <XCircle className="w-4 h-4 shrink-0" />
+                      <span>Proposal was declined with reason: &ldquo;{selectedEngagement.declineReason || 'Schedule conflict'}&rdquo;.</span>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+
+              {/* Sidebar: Audit History & Confirmed Scope (4 Cols) */}
+              <div className="lg:col-span-4 space-y-6">
+                
+                {/* Audit Trail Card */}
+                <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-3">
+                  <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-zinc-400" />
+                      <h3 className="font-semibold text-white text-sm">Audit Log</h3>
+                    </div>
+                    <span className="text-xs text-zinc-500">{auditLogs.length} Events</span>
+                  </div>
+
+                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                    {auditLogs.map((log) => (
+                      <div key={log.id} className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-850 text-xs flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          <span className="font-mono text-zinc-200">{log.action}</span>
+                          <span className="text-zinc-500">by {log.actorName}</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-500">
+                          {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Creator Information */}
+                <div className="p-5 rounded-2xl bg-zinc-900/60 border border-zinc-800 space-y-3">
+                  <span className="text-[10px] font-mono uppercase text-zinc-500 block">Assigned Creator</span>
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={selectedEngagement.creatorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedEngagement.creatorName}`}
+                      alt={selectedEngagement.creatorName}
+                      className="w-10 h-10 rounded-xl object-cover bg-zinc-950 border border-zinc-750"
+                    />
+                    <div>
+                      <h4 className="font-semibold text-white text-sm">{selectedEngagement.creatorName}</h4>
+                      <p className="text-xs text-zinc-400 font-mono">ID: {selectedEngagement.creatorId}</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 2: DELIVERABLES & QA PRODUCTION WORKSPACE */}
+          {workspaceTab === 'production' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* Left 7 Cols: Draft Version Browser & Physical Delivery Checks */}
@@ -915,6 +1286,7 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
             </div>
 
           </div>
+          )}
         </>
       )}
 
@@ -1012,38 +1384,182 @@ export const EngagementWorkspace: React.FC<EngagementWorkspaceProps> = ({
         </div>
       )}
 
-      {/* Decline Engagement Modal */}
-      {declineModalOpen && (
+      {/* Accept Proposal Confirmation Modal */}
+      {acceptModalOpen && selectedEngagement && (
+        <div className="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-zinc-900 border border-zinc-750 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-semibold text-white text-base">Accept Commission Proposal</h3>
+              </div>
+              <button
+                onClick={() => setAcceptModalOpen(false)}
+                className="text-zinc-400 hover:text-white p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p className="text-zinc-300">
+                You are accepting the commission proposal from <strong className="text-white">{selectedEngagement.brandName}</strong>. Please review and confirm the core terms:
+              </p>
+
+              <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+                <div className="flex justify-between py-1 border-b border-zinc-850">
+                  <span className="text-zinc-500">Campaign / Title:</span>
+                  <span className="font-medium text-white">{selectedEngagement.projectTitle}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-zinc-850">
+                  <span className="text-zinc-500">Agreed Commission:</span>
+                  <span className="font-mono text-emerald-400 font-bold text-sm">{selectedEngagement.proposedBudget}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-zinc-850">
+                  <span className="text-zinc-500">Target Deadline:</span>
+                  <span className="font-medium text-zinc-200">{selectedBrief?.deadline || selectedEngagement.agreedTerms?.confirmedDeadline || '5 Days'}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-zinc-850">
+                  <span className="text-zinc-500">Commercial Scope:</span>
+                  <span className="font-medium text-zinc-200">
+                    {selectedBrief?.licensingRequirements?.commercialScope || (selectedEngagement.licensingStatus === 'COMPATIBLE' ? 'Full Buyout' : 'Commercial Licensed')}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-zinc-500">Territory & Channels:</span>
+                  <span className="font-medium text-zinc-200">
+                    {selectedBrief?.licensingRequirements?.territory || 'Worldwide'} • {selectedBrief?.licensingRequirements?.channels?.slice(0, 2).join(', ') || 'All Media'}
+                  </span>
+                </div>
+              </div>
+
+              {selectedEngagement.licensingStatus === 'MISMATCH' && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2 text-amber-300">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p className="text-[11px]">
+                    <strong>Licensing Alert:</strong> Potential parameter mismatch detected. Acceptance confirms willingness to negotiate terms during formal agreement lock.
+                  </p>
+                </div>
+              )}
+
+              <label className="flex items-start gap-2.5 pt-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={termsAgreed}
+                  onChange={(e) => setTermsAgreed(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded accent-emerald-500"
+                />
+                <span className="text-zinc-300 text-xs leading-relaxed">
+                  I explicitly confirm acceptance of this commission, the proposed deliverables, milestone schedule, and commercial licensing rights.
+                </span>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={() => setAcceptModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!termsAgreed || isActionLoading}
+                onClick={async () => {
+                  await handleTransition('CREATOR_ACCEPTED');
+                  setAcceptModalOpen(false);
+                  setTermsAgreed(false);
+                }}
+                className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4 text-zinc-950" />
+                <span>{isActionLoading ? 'Recording Decision...' : 'Confirm & Accept Proposal'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decline Engagement Modal with Reason Presets */}
+      {declineModalOpen && selectedEngagement && (
         <div className="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-zinc-900 border border-zinc-750 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="font-semibold text-white text-base">Decline Engagement Proposal</h3>
-            <p className="text-xs text-zinc-400">Please provide a reason for declining this campaign commission.</p>
-
-            <textarea
-              value={declineReason}
-              onChange={(e) => setDeclineReason(e.target.value)}
-              placeholder="e.g. Schedule conflict with upcoming feature film or licensing scope mismatch..."
-              rows={3}
-              className="w-full p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-200"
-              required
-            />
-
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+              <div className="flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-red-400" />
+                <h3 className="font-semibold text-white text-base">Decline Commission Proposal</h3>
+              </div>
               <button
+                onClick={() => setDeclineModalOpen(false)}
+                className="text-zinc-400 hover:text-white p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-400">
+              Please specify the reason for declining this campaign commission inquiry from <strong className="text-white">{selectedEngagement.brandName}</strong>. The engagement history will be preserved.
+            </p>
+
+            {/* Quick Reason Presets */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono uppercase text-zinc-500">Quick Reason Select</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Schedule conflict / fully booked',
+                  'Budget below minimum rate',
+                  'Timeline too tight',
+                  'Licensing scope mismatch',
+                  'Creative vision misalignment'
+                ].map(preset => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setDeclineReason(preset)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] border transition-colors ${
+                      declineReason === preset
+                        ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                        : 'bg-zinc-950 text-zinc-400 border-zinc-800 hover:text-white'
+                    }`}
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-zinc-300 mb-1">Decline Note for Brand</label>
+              <textarea
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                placeholder="Describe reason (e.g. Current production slate is committed through next month...)"
+                rows={3}
+                className="w-full p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 focus:outline-none focus:border-zinc-700"
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-zinc-800">
+              <button
+                type="button"
                 onClick={() => setDeclineModalOpen(false)}
                 className="px-3.5 py-1.5 rounded-xl text-xs text-zinc-400 hover:text-white"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  handleTransition('CREATOR_DECLINED', { declineReason });
+                type="button"
+                disabled={!declineReason.trim() || isActionLoading}
+                onClick={async () => {
+                  await handleTransition('CREATOR_DECLINED', { declineReason });
                   setDeclineModalOpen(false);
                 }}
-                disabled={!declineReason.trim()}
-                className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-xs disabled:opacity-50"
+                className="px-4 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-xs disabled:opacity-50 flex items-center gap-1.5"
               >
-                Confirm Decline
+                <XCircle className="w-3.5 h-3.5" />
+                <span>{isActionLoading ? 'Declining...' : 'Confirm Decline'}</span>
               </button>
             </div>
           </div>

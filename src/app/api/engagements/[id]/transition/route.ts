@@ -31,6 +31,14 @@ export async function POST(
       }, { status: 404 });
     }
 
+    // Creator decision authority guard:
+    if ((targetState === 'CREATOR_ACCEPTED' || targetState === 'CREATOR_DECLINED') && actorRole !== 'creator') {
+      return NextResponse.json({
+        success: false,
+        error: { code: 'UNAUTHORIZED', message: 'Forbidden: Only the assigned creator can accept or decline this commission proposal.' }
+      }, { status: 403 });
+    }
+
     // Role-based authorization guard check:
     if (actorRole === 'creator' && actorId !== 'user-default' && actorId !== engagement.creatorId) {
       return NextResponse.json({
@@ -44,6 +52,15 @@ export async function POST(
         success: false,
         error: { code: 'UNAUTHORIZED', message: 'Forbidden: You are not the owning brand for this engagement.' }
       }, { status: 403 });
+    }
+
+    // Idempotent state transition check
+    if (engagement.status === targetState) {
+      return NextResponse.json({
+        success: true,
+        engagement,
+        message: `Proposal is already in state ${targetState}.`,
+      });
     }
 
     const validation = validateEngagementTransition(engagement, targetState, actorRole, body);

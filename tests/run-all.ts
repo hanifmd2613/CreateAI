@@ -5,6 +5,7 @@ import { runDeliveryCheckUnitTests } from './unit/deliveryCheck.test';
 import { runSearchUnitTests } from './unit/search.test';
 import { runAuthUnitTests } from './unit/auth.test';
 import { runRoleGuardUnitTests } from './unit/roleGuard.test';
+import { runCommissionWorkflowTests } from './unit/commissionWorkflow.test';
 import { runAcceptanceTests } from './integration/acceptance.test';
 
 async function main() {
@@ -114,8 +115,22 @@ async function main() {
     }
   }
 
-  // 8. 18 Mandatory Acceptance Tests
-  console.log('\n--- 8. MANDATORY ACCEPTANCE TEST SCENARIOS (TEST 1 - 18) ---');
+  // 8. Creator Commission Workflow & Proposal Decision Unit Tests
+  console.log('\n--- 8. CREATOR COMMISSION WORKFLOW & PROPOSAL DECISION TESTS ---');
+  const commissionResults = await runCommissionWorkflowTests();
+  for (const t of commissionResults.tests) {
+    totalTests++;
+    if (t.pass) {
+      passedTests++;
+      console.log(`  ✅ [PASS] ${t.name}`);
+    } else {
+      failedTests++;
+      console.error(`  ❌ [FAIL] ${t.name}: ${t.details}`);
+    }
+  }
+
+  // 9. 18 Mandatory Acceptance Tests
+  console.log('\n--- 9. MANDATORY ACCEPTANCE TEST SCENARIOS (TEST 1 - 18) ---');
   const acceptanceResults = await runAcceptanceTests();
   for (const r of acceptanceResults) {
     totalTests++;

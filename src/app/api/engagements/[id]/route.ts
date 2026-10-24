@@ -6,6 +6,9 @@ import {
   getDeliveryChecks,
   getAuditLogs
 } from '@/lib/engagementStore';
+import { connectToDatabase } from '@/lib/mongodb';
+import { BriefModel } from '@/lib/models/Brief';
+import { INITIAL_BRIEFS } from '@/data/mockData';
 
 export async function GET(
   req: NextRequest,
@@ -22,6 +25,19 @@ export async function GET(
       }, { status: 404 });
     }
 
+    let brief = null;
+    if (engagement.briefId) {
+      try {
+        const conn = await connectToDatabase();
+        if (conn) {
+          brief = await BriefModel.findOne({ id: engagement.briefId }).lean();
+        }
+      } catch (e) {}
+      if (!brief) {
+        brief = INITIAL_BRIEFS.find(b => b.id === engagement.briefId) || null;
+      }
+    }
+
     const [versions, feedback, deliveryChecks, auditLogs] = await Promise.all([
       getVersions(id),
       getFeedback(id),
@@ -32,6 +48,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       engagement,
+      brief,
       versions,
       feedback,
       deliveryChecks,

@@ -65,10 +65,10 @@ export async function POST(req: NextRequest) {
       creatorName: body.creatorName || (creator ? creator.name : 'Target Creator'),
       creatorAvatar: body.creatorAvatar || (creator ? creator.avatar : undefined),
       projectTitle: body.projectTitle.trim(),
-      proposedBudget: body.proposedBudget || '₹3,50,000',
+      proposedBudget: body.proposedBudget || body.budget || '₹3,50,000',
       status: 'CONTACTED',
       licensingStatus,
-      message: body.message || 'Direct project inquiry submitted via GenCraft Marketplace.',
+      message: body.message || body.initialMessage || 'Direct project inquiry submitted via GenCraft Marketplace.',
       milestones: body.milestones || [
         { title: 'Initial Style Seeds & Keyframe Approval', amount: '50%', status: 'In Escrow' },
         { title: 'Final 4K Master & Seed Manifest Delivery', amount: '50%', status: 'Pending' }
