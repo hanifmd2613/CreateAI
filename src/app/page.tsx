@@ -182,6 +182,47 @@ export default function Home() {
     }
   }, []);
 
+  // Fetch persisted marketplace data (creators and briefs) from MongoDB
+  useEffect(() => {
+    let isMounted = true;
+    const loadMarketplaceData = async () => {
+      try {
+        const [creatorsRes, briefsRes] = await Promise.all([
+          fetch('/api/creators'),
+          fetch('/api/briefs')
+        ]);
+        if (creatorsRes.ok) {
+          const data = await creatorsRes.json();
+          if (isMounted && data.creators && Array.isArray(data.creators) && data.creators.length > 0) {
+            setCreators(data.creators);
+          }
+        }
+        if (briefsRes.ok) {
+          const data = await briefsRes.json();
+          if (isMounted && data.briefs && Array.isArray(data.briefs)) {
+            setBriefs(prev => {
+              const serverMap = new Map(data.briefs.map((b: Brief) => [b.id, b]));
+              const merged = [...data.briefs];
+              for (const init of prev) {
+                if (!serverMap.has(init.id)) {
+                  merged.push(init);
+                }
+              }
+              return merged;
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load initial marketplace data:', err);
+      }
+    };
+
+    loadMarketplaceData();
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser]);
+
   // Close search suggestions on click outside or escape key
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -354,7 +395,7 @@ export default function Home() {
 
   // Publish New Brief from Builder
   const handlePublishBrief = (newBrief: Brief) => {
-    setBriefs([newBrief, ...briefs]);
+    setBriefs(prev => [newBrief, ...prev.filter(b => b.id !== newBrief.id)]);
     setMatchingBrief(newBrief);
     showToast(`Campaign Brief "${newBrief.title}" published! Displaying explainable creator matches.`);
   };
@@ -974,6 +1015,7 @@ export default function Home() {
               preselectedCreator={builderTargetCreator}
               groqKey={groqKey}
               geminiKey={geminiKey}
+              currentUser={currentUser}
               onOpenApiConfig={currentUser?.role === 'brand' ? () => setApiConfigModalOpen(true) : undefined}
             />
           </FadeInSection>
@@ -984,6 +1026,7 @@ export default function Home() {
           <FadeInSection delayMs={20} className="w-full">
             <BriefsFeed
               briefs={briefs}
+              currentUser={currentUser}
               onNavigateToBuilder={() => {
                 setBuilderInitialPrompt('');
                 setBuilderTargetCreator(null);
@@ -1084,6 +1127,7 @@ export default function Home() {
         <HireModal
           creator={hiringCreator}
           briefs={briefs}
+          currentUser={currentUser}
           onClose={() => setHiringCreator(null)}
           onSuccess={(msg) => showToast(msg)}
         />

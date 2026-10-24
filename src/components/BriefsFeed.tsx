@@ -95,23 +95,66 @@ export const BriefsFeed: React.FC<BriefsFeedProps> = ({
         }}
         className="bg-zinc-900/60 rounded-2xl border border-zinc-800 section-glow p-4 mb-6 flex flex-wrap items-center justify-between gap-3"
       >
-        <div className="flex items-center gap-1.5 flex-wrap text-xs">
-          <span className="font-medium text-zinc-500 uppercase tracking-wider text-[11px] mr-1">
-            Format:
-          </span>
-          {['all', 'Video', 'Imagery', 'Motion', 'Animation'].map((ft) => (
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Scope Selector */}
+          <div className="flex items-center bg-zinc-950 p-0.5 rounded-lg border border-zinc-850">
             <button
-              key={ft}
-              onClick={() => setFilterType(ft)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-                filterType === ft
-                  ? 'bg-white text-zinc-950 font-semibold'
-                  : 'bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-850 hover:bg-zinc-900'
+              onClick={() => setScopeTab('all')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                scopeTab === 'all'
+                  ? 'bg-zinc-800 text-white font-semibold'
+                  : 'text-zinc-400 hover:text-white'
               }`}
             >
-              {ft === 'all' ? 'All Formats' : ft}
+              Public Feed
             </button>
-          ))}
+            {currentUser?.role === 'creator' && (
+              <button
+                onClick={() => setScopeTab('assigned')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  scopeTab === 'assigned'
+                    ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>Assigned to Me</span>
+              </button>
+            )}
+            {currentUser?.role === 'brand' && (
+              <button
+                onClick={() => setScopeTab('mine')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  scopeTab === 'mine'
+                    ? 'bg-zinc-800 text-white font-semibold'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <span>My Brand Briefs</span>
+              </button>
+            )}
+          </div>
+
+          <div className="h-4 w-px bg-zinc-800 hidden sm:block" />
+
+          <div className="flex items-center gap-1.5 flex-wrap text-xs">
+            <span className="font-medium text-zinc-500 uppercase tracking-wider text-[11px] mr-1">
+              Format:
+            </span>
+            {['all', 'Video', 'Imagery', 'Motion', 'Animation'].map((ft) => (
+              <button
+                key={ft}
+                onClick={() => setFilterType(ft)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  filterType === ft
+                    ? 'bg-white text-zinc-950 font-semibold'
+                    : 'bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-850 hover:bg-zinc-900'
+                }`}
+              >
+                {ft === 'all' ? 'All Formats' : ft}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs">
@@ -143,6 +186,22 @@ export const BriefsFeed: React.FC<BriefsFeedProps> = ({
             className="bg-zinc-900/60 rounded-2xl border border-zinc-800 section-glow p-6 shadow-sm transition-colors flex flex-col justify-between"
           >
             <div>
+              {/* Assignment Banner if applicable */}
+              {brief.assignedCreatorName && (
+                <div className="mb-3 flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    Directly assigned to: <strong className="text-white">{brief.assignedCreatorName}</strong>
+                  </span>
+                  {brief.visibility === 'private' && (
+                    <span className="flex items-center gap-1 text-[11px] text-zinc-400">
+                      <Lock className="w-3 h-3 text-zinc-500" />
+                      Private Brief
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Header Info */}
               <div className="flex items-start justify-between gap-3 mb-3.5">
                 <div className="flex items-center gap-3">

@@ -12,6 +12,7 @@ import { runBackendReliabilityTests } from './unit/backendReliability.test';
 import { runCreatorProfilePortfolioTests } from './unit/creatorProfilePortfolio.test';
 import { runMLIntelligenceTests } from './unit/mlIntelligence.test';
 import { runWorkplaceActionsTests } from './unit/workplaceActions.test';
+import { runFirebaseBriefAssignmentTests } from './unit/firebaseBriefAssignment.test';
 
 async function main() {
   console.log('================================================================');
@@ -228,6 +229,26 @@ async function main() {
     totalTests++;
     failedTests++;
     console.error(`  ❌ [FAIL] Workplace Actions Suite: ${err.message}`);
+  }
+
+  // 15. Firebase Client & Brand Brief Assignment Tests
+  console.log('\n--- 15. FIREBASE CLIENT & BRAND-TO-CREATOR BRIEF ASSIGNMENT TESTS ---');
+  try {
+    const fbRes = await runFirebaseBriefAssignmentTests();
+    for (const t of fbRes.tests) {
+      totalTests++;
+      if (t.pass) {
+        passedTests++;
+        console.log(`  ✅ [PASS] ${t.name}`);
+      } else {
+        failedTests++;
+        console.error(`  ❌ [FAIL] ${t.name}: ${t.details}`);
+      }
+    }
+  } catch (err: any) {
+    totalTests++;
+    failedTests++;
+    console.error(`  ❌ [FAIL] Firebase Brief Assignment Suite: ${err.message}`);
   }
 
   console.log('\n================================================================');
