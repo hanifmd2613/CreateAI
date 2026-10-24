@@ -31,5 +31,18 @@
     "tailwindcss": "^3.4.14",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@firebase/util",
+      "esbuild",
+      "protobufjs"
+    ]
+  },
+  "allowScripts": {
+    "@firebase/util": true,
+    "esbuild": true,
+    "protobufjs": true
   }
 }
+

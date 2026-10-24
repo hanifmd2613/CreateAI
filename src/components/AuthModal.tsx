@@ -425,7 +425,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="name@company.com"
                   className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                 />
               </div>
@@ -433,7 +432,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
                 <span>Send Reset Link</span>
@@ -453,7 +452,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="karthik@karthiksubramanian.ai"
                     className="w-full pl-9 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
@@ -468,7 +466,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••"
                     className="w-full pl-9 pr-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
@@ -477,10 +474,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
-                <span>Sign In to GenCraft</span>
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Signing In...</span>
+                  </>
+                ) : (
+                  <span>Sign In to GenCraft</span>
+                )}
               </button>
             </form>
           )}
@@ -538,7 +541,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Subhash Kumar"
                     className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
@@ -550,7 +552,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="subhash@creative.ai"
                     className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
@@ -559,13 +560,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               {/* Passwords */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-zinc-300 mb-1">Password</label>
+                  <label className="block text-xs font-medium text-zinc-300 mb-1">
+                    Password <span className="text-zinc-500 font-normal">(min. 6 characters)</span>
+                  </label>
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Min 6 characters"
                     className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
@@ -576,7 +578,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Repeat password"
                     className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
@@ -589,7 +590,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     type="text"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Apex Media Group"
                     className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
@@ -601,7 +601,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       type="text"
                       value={specialization}
                       onChange={(e) => setSpecialization(e.target.value)}
-                      placeholder="AI Commercials & Hyperrealism"
                       className="w-full px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                     />
                   </div>
@@ -631,11 +630,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-2.5 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-lg bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
-                <span>Create GenCraft Account</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Creating Account...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Create GenCraft Account</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                )}
               </button>
             </form>
           )}

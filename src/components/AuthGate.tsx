@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserAccount, UserRole, Creator } from '../types';
 import { playAiVoiceGreeting } from '../utils/speech';
 import { 
@@ -21,7 +21,6 @@ import {
   Building, 
   CheckCircle2, 
   RefreshCw, 
-  Volume2, 
   Briefcase, 
   MapPin, 
   Lock,
@@ -40,24 +39,19 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
   const [role, setRole] = useState<UserRole>('creator');
   
   // Form fields
-  const [name, setName] = useState('Arjun Nambiar');
-  const [email, setEmail] = useState('arjun.ai@creators.in');
-  const [password, setPassword] = useState('GenCraft@2026');
-  const [confirmPassword, setConfirmPassword] = useState('GenCraft@2026');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
   // Role-specific fields
   const [gender, setGender] = useState<'male' | 'female'>('male');
-  const [companyName, setCompanyName] = useState('Kaveri Media Group');
+  const [companyName, setCompanyName] = useState('');
   const [specialization, setSpecialization] = useState('AI Filmmaker & Commercial Director');
   const [location, setLocation] = useState('Bengaluru, Karnataka');
   const [selectedTools, setSelectedTools] = useState<string[]>(['Veo', 'Kling', 'ElevenLabs']);
   
-  // OTP flow state
-  const [otpStep, setOtpStep] = useState<'input-details' | 'verify-otp'>('input-details');
-  const [enteredOtp, setEnteredOtp] = useState<string>('');
-  const [otpNotice, setOtpNotice] = useState<string | null>(null);
-  const [resendCooldown, setResendCooldown] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [resetSuccessMsg, setResetSuccessMsg] = useState<string | null>(null);
@@ -66,15 +60,6 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
   const avatarUrl = gender === 'male'
     ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name || 'BoyCandidate')}&gender=male&hairColor=2c1b18&facialHairProbability=40`
     : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name || 'GirlCandidate')}&gender=female&hairColor=2c1b18&facialHairProbability=0&accessoriesProbability=20`;
-
-  // Resend timer countdown
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const timer = setInterval(() => {
-      setResendCooldown((prev) => prev - 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [resendCooldown]);
 
   // Handle Google Sign-In
   const handleGoogleAuth = async () => {
@@ -127,98 +112,50 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
     }
   };
 
-  // Dispatch real server-side OTP code
-  const handleSendVerificationCode = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  // Direct Email/Password Registration
+  const handleSignUpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setErrorMsg(null);
-    setResetSuccessMsg(null);
+
+    if (!name.trim()) {
+      setErrorMsg('Please enter your full name.');
+      return;
+    }
 
     if (!email || !email.includes('@')) {
       setErrorMsg('Please enter a valid email address.');
       return;
     }
 
-    if (authMode === 'signup') {
-      if (!name.trim()) {
-        setErrorMsg('Please enter your full candidate name.');
-        return;
-      }
-      if (password.length < 6) {
-        setErrorMsg('Password must be at least 6 characters long.');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setErrorMsg('Passwords do not match. Please check confirmation.');
-        return;
-      }
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
     }
 
-    setIsLoading(true);
-
-    try {
-      const res = await fetch('/api/auth/send-verification-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, purpose: 'signup' }),
-      });
-
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        setErrorMsg(data.error || 'Failed to send verification code.');
-        setIsLoading(false);
-        return;
-      }
-
-      setEnteredOtp('');
-      setOtpStep('verify-otp');
-      setResendCooldown(60);
-
-      if (data.devCode) {
-        setOtpNotice(`Code sent to ${email} (Demo code: ${data.devCode})`);
-      } else {
-        setOtpNotice(`Verification code dispatched to ${email}. Check your inbox.`);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to dispatch verification code.');
-    } finally {
-      setIsLoading(false);
+    if (password !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please verify your password confirmation.');
+      return;
     }
-  };
 
-  // Verify OTP & complete signup
-  const handleVerifyCodeAndSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setErrorMsg(null);
+    if (role === 'brand' && !companyName.trim()) {
+      setErrorMsg('Please enter your company or studio name.');
+      return;
+    }
 
-    if (!enteredOtp || enteredOtp.trim().length !== 6) {
-      setErrorMsg('Please enter the complete 6-digit verification code.');
+    if (role === 'creator' && !specialization.trim()) {
+      setErrorMsg('Please enter your primary specialization.');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // 1. Verify code on server
-      const verifyRes = await fetch('/api/auth/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: enteredOtp.trim() }),
-      });
-
-      const verifyData = await verifyRes.json();
-      if (!verifyRes.ok || verifyData.error) {
-        setErrorMsg(verifyData.error || 'Invalid verification code.');
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. Create Auth user via dual Firebase/Server provider
       const { user: fbUser, error: signupError } = await signUpWithEmail(email, password, {
         name: name.trim(),
         role: role,
         confirmPassword: confirmPassword,
-        companyName: role === 'brand' ? companyName : undefined,
-        specialization: role === 'creator' ? specialization : undefined,
+        companyName: role === 'brand' ? companyName.trim() : undefined,
+        specialization: role === 'creator' ? specialization.trim() : undefined,
       });
 
       if (signupError || !fbUser) {
@@ -228,9 +165,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
       }
 
       const uid = fbUser.uid;
-
-      // 3. Build & Save Authoritative Profile
-      const cleanFirstName = name.trim().split(' ')[0] || 'Candidate';
+      const cleanFirstName = name.trim().split(' ')[0] || 'User';
       const handle = `@${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
 
       const userAccount: UserAccount = {
@@ -241,8 +176,8 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
         avatar: avatarUrl,
         handle: handle,
         gender: gender,
-        companyName: role === 'brand' ? companyName : undefined,
-        specialization: role === 'creator' ? specialization : undefined,
+        companyName: role === 'brand' ? companyName.trim() : undefined,
+        specialization: role === 'creator' ? specialization.trim() : undefined,
         bio: role === 'creator' 
           ? `Verified Generative AI creator specialized in ${selectedTools.join(', ')}. Delivering high-fidelity commercials and motion graphics.`
           : undefined,
@@ -262,10 +197,10 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
 
       setTimeout(() => {
         onAuthSuccess(userAccount, newCreator);
-      }, 600);
+      }, 500);
 
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error during account verification & creation.');
+      setErrorMsg(err.message || 'Error during account creation.');
     } finally {
       setIsLoading(false);
     }
@@ -393,8 +328,9 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
     setGender(presetGender);
     setName(presetName);
     setEmail(presetEmail);
+    setPassword('GenCraft@2026');
+    setConfirmPassword('GenCraft@2026');
     if (presetSpecialization) setSpecialization(presetSpecialization);
-    setOtpStep('input-details');
     setErrorMsg(null);
   };
 
@@ -483,7 +419,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
           {/* Mode Tabs: Signup | Signin | Reset */}
           <div className="flex items-center p-1 rounded-xl bg-zinc-950 border border-zinc-850">
             <button
-              onClick={() => { setAuthMode('signup'); setOtpStep('input-details'); setErrorMsg(null); }}
+              onClick={() => { setAuthMode('signup'); setErrorMsg(null); }}
               className={`flex-1 py-2 rounded-lg text-xs font-semibold transition-all ${
                 authMode === 'signup' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
               }`}
@@ -559,8 +495,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@company.com"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
               </div>
@@ -568,7 +503,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 font-semibold text-xs transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
                 <span>Send Reset Password Email</span>
@@ -587,8 +522,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="arjun.ai@creators.in"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                   />
                 </div>
               </div>
@@ -602,8 +536,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                    className="w-full pl-9 pr-10 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                   />
                   <button
                     type="button"
@@ -618,7 +551,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 rounded-xl font-semibold text-xs sm:text-sm bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.99]"
+                className="w-full py-3.5 rounded-xl font-semibold text-xs sm:text-sm bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.99] disabled:opacity-50"
               >
                 {isLoading ? <RefreshCw className="w-4 h-4 animate-spin text-zinc-900" /> : <ShieldCheck className="w-4 h-4 text-emerald-600" />}
                 <span>Sign In to GenCraft</span>
@@ -626,8 +559,8 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
             </form>
           )}
 
-          {authMode === 'signup' && otpStep === 'input-details' && (
-            <form onSubmit={handleSendVerificationCode} className="space-y-4">
+          {authMode === 'signup' && (
+            <form onSubmit={handleSignUpSubmit} className="space-y-4">
               
               {/* Role Selection Cards */}
               <div>
@@ -680,7 +613,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                     />
                   </div>
                 </div>
@@ -694,7 +627,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                     />
                   </div>
                 </div>
@@ -703,7 +636,9 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
               {/* Password Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Password</label>
+                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">
+                    Password <span className="text-zinc-500 font-normal">(min. 6 characters)</span>
+                  </label>
                   <div className="relative">
                     <Lock className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -711,8 +646,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Min 6 characters"
-                      className="w-full pl-8 pr-8 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                      className="w-full pl-8 pr-8 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                     />
                   </div>
                 </div>
@@ -726,8 +660,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repeat password"
-                      className="w-full pl-8 pr-8 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                      className="w-full pl-8 pr-8 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                     />
                   </div>
                 </div>
@@ -744,7 +677,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                       required
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                      className="w-full pl-8 pr-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                     />
                   </div>
                 </div>
@@ -757,7 +690,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                       required
                       value={specialization}
                       onChange={(e) => setSpecialization(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600"
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-zinc-600"
                     />
                   </div>
 
@@ -783,94 +716,21 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onAuthSuccess, onVoiceSpoken
                 </div>
               )}
 
-              {/* Submit to Send Code */}
+              {/* Submit to Register */}
               <button
                 type="submit"
                 disabled={isLoading}
                 className="w-full py-3.5 rounded-xl font-semibold text-xs sm:text-sm bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.99] disabled:opacity-50"
               >
                 {isLoading ? (
-                  <RefreshCw className="w-4 h-4 animate-spin text-zinc-900" />
-                ) : (
-                  <>
-                    <Mail className="w-4 h-4 text-emerald-600" />
-                    <span>Send Verification Code to Email</span>
-                    <ArrowRight className="w-4 h-4 text-zinc-900" />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* OTP Verification Step */}
-          {authMode === 'signup' && otpStep === 'verify-otp' && (
-            <form onSubmit={handleVerifyCodeAndSubmit} className="space-y-4">
-              <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-300 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-white">Verification Challenge Dispatched</span>
-                  <button
-                    type="button"
-                    onClick={() => setOtpStep('input-details')}
-                    className="text-xs text-emerald-400 hover:underline"
-                  >
-                    Edit details
-                  </button>
-                </div>
-                <p className="text-[11px] text-zinc-400">
-                  {otpNotice || `Enter the 6-digit security code sent to ${email}.`}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-2 text-center">
-                  6-Digit Verification Code
-                </label>
-                <div className="flex justify-center">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    required
-                    value={enteredOtp}
-                    onChange={(e) => setEnteredOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="123456"
-                    className="w-48 px-4 py-3 rounded-xl bg-zinc-950 border-2 border-emerald-500/60 text-center font-mono text-xl tracking-[8px] text-white focus:outline-none focus:border-emerald-400"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-xs">
-                <button
-                  type="button"
-                  disabled={resendCooldown > 0 || isLoading}
-                  onClick={handleSendVerificationCode}
-                  className="text-zinc-400 hover:text-white disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  <span>{resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}</span>
-                </button>
-              </div>
-
-              <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-850 flex items-center gap-2.5 text-xs text-zinc-400">
-                <Volume2 className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
-                <span>
-                  On verification, our English AI voice agent will greet: <strong className="text-zinc-200">"Hello {name.split(' ')[0] || 'Candidate'}, and welcome to GenCraft."</strong>
-                </span>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading || enteredOtp.length !== 6}
-                className="w-full py-3.5 rounded-xl font-semibold text-xs sm:text-sm bg-white hover:bg-zinc-200 disabled:opacity-50 text-zinc-950 flex items-center justify-center gap-2 transition-all shadow-lg active:scale-[0.99]"
-              >
-                {isLoading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-zinc-900" />
-                    <span>Verifying Code & Activating Account...</span>
+                    <span>Creating Account...</span>
                   </>
                 ) : (
                   <>
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    <span>Verify Code & Complete Activation</span>
+                    <User className="w-4 h-4 text-emerald-600" />
+                    <span>Create GenCraft Account</span>
                     <ArrowRight className="w-4 h-4 text-zinc-900" />
                   </>
                 )}
